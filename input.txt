@@ -1,0 +1,5056 @@
+export default interface ICreateAppointmentDTO {
+  provider_id: string;
+  date: Date;
+}import { Request, Response } from "express";
+import { parseISO } from "date-fns";
+import { container } from "tsyringe";
+
+import CreateAppointmentService from "@modules/appointments/services/CreateAppointmentService";
+
+export default class AppointmentsController {
+  public async create(request: Request, response: Response): Promise<Response> {
+    const { provider_id, date } = request.body;
+
+    const parsedDate = parseISO(date);
+
+    const createAppointmentService = container.resolve(
+      CreateAppointmentService,
+    );
+
+    const appointment = await createAppointmentService.execute({
+      date: parsedDate,
+      provider_id,
+    });
+
+    return response.json({ appointment });
+  }
+}import { Router } from "express";
+
+import ensureAuthenticated from "@modules/users/infra/http/middlewares/ensureAuthenticated";
+
+import AppointmentsController from "@modules/appointments/infra/http/controllers/AppointmentsController";
+
+const appointmentsRouter = Router();
+const appointmentsController = new AppointmentsController();
+
+appointmentsRouter.use(ensureAuthenticated);
+
+// appointmentsRouter.get("/", async (request, response) => {
+//   const appointments = await appointmentsRepository.find();
+//   return response.json(appointments);
+// });
+
+appointmentsRouter.post("/", appointmentsController.create);
+
+export default appointmentsRouter;import "reflect-metadata";
+
+import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+
+import "express-async-errors";
+
+import uploadConfig from "@config/upload";
+import AppError from "@shared/errors/AppError";
+
+import routes from "./routes";
+
+import "@shared/infra/typeorm";
+import "@shared/container";
+
+const app = express();
+
+app.use(cors());
+// app.use(
+//   cors({
+//     origin: "http://localhost:3333",
+//   }),
+// );
+app.use(express.json());
+app.use("/files", express.static(uploadConfig.directory));
+app.use(routes);
+
+app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
+  if (err instanceof AppError) {
+    return response.status(err.statusCode).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+
+  return response.status(500).json({
+    status: "error",
+    message: "Internal server error",
+  });
+});
+
+app.listen(3333, () => {
+  console.log("🚀 Server started on port 3333!");
+});import { Router } from "express";
+
+import appointmentsRouter from "@modules/appointments/infra/http/routes/appointments.routes";
+import usersRouter from "@modules/users/infra/http/routes/users.routes";
+import sessionRouter from "@modules/users/infra/http/routes/session.routes";
+
+const routes = Router();
+routes.use("/appointments", appointmentsRouter);
+routes.use("/users", usersRouter);
+routes.use("/sessions", sessionRouter);
+{
+  "name": "primeiro-projeto-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "script": "tsc",
+    "dev:server": "ts-node-dev -r tsconfig-paths/register --inspect --transpileOnly --ignore-watch node_modules src/shared/infra/http/server.ts",
+    "start": "ts-node src/shared/infra/http/server.ts",
+    "typeorm": "ts-node-dev -r tsconfig-paths/register ./node_modules/typeorm/cli.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "date-fns": "^2.13.0",
+    "express": "^4.17.1",
+    "express-async-errors": "^3.1.1",
+    "jsonwebtoken": "^8.5.1",
+    "multer": "^1.4.2",
+    "pg": "^8.2.1",
+    "prettier": "^2.0.5",
+    "reflect-metadata": "^0.1.13",
+    "tsyringe": "^4.3.0",
+    "typeorm": "^0.2.25",
+    "uuidv4": "^6.0.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.2",
+    "@types/cors": "^2.8.6",
+    "@types/express": "^4.17.6",
+    "@types/jsonwebtoken": "^8.5.0",
+    "@types/multer": "^1.4.3",
+    "@typescript-eslint/eslint-plugin": "^2.33.0",
+    "@typescript-eslint/parser": "^2.33.0",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-import-resolver-typescript": "^2.0.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-prettier": "^3.1.3",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "tsconfig-paths": "^3.9.0",{
+  "compilerOptions": {
+    /* Basic Options */
+    // "incremental": true,                   /* Enable incremental compilation */
+    "target": "es5", /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', or 'ESNEXT'. */
+    "module": "commonjs", /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */
+    // "lib": [],                             /* Specify library files to be included in the compilation. */
+    // "allowJs": true,                       /* Allow javascript files to be compiled. */
+    // "checkJs": true,                       /* Report errors in .js files. */
+    // "jsx": "preserve",                     /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */
+    // "declaration": true,                   /* Generates corresponding '.d.ts' file. */
+    // "declarationMap": true,                /* Generates a sourcemap for each corresponding '.d.ts' file. */
+    // "sourceMap": true,                     /* Generates corresponding '.map' file. */
+    // "outFile": "./",                       /* Concatenate and emit output to single file. */
+    "outDir": "./dist", /* Redirect output structure to the directory. */
+    "rootDir": "./src", /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
+    // "composite": true,                     /* Enable project compilation */
+    // "tsBuildInfoFile": "./",               /* Specify file to store incremental compilation information */
+    // "removeComments": true,                /* Do not emit comments to output. */
+    // "noEmit": true,                        /* Do not emit outputs. */
+    // "importHelpers": true,                 /* Import emit helpers from 'tslib'. */
+    // "downlevelIteration": true,            /* Provide full support for iterables in 'for-of', spread, and destructuring when targeting 'ES5' or 'ES3'. */
+    // "isolatedModules": true,               /* Transpile each file as a separate module (similar to 'ts.transpileModule'). */
+    /* Strict Type-Checking Options */
+    "strict": true, /* Enable all strict type-checking options. */
+    // "noImplicitAny": true,                 /* Raise error on expressions and declarations with an implied 'any' type. */
+    // "strictNullChecks": true,              /* Enable strict null checks. */
+    // "strictFunctionTypes": true,           /* Enable strict checking of function types. */
+    // "strictBindCallApply": true,           /* Enable strict 'bind', 'call', and 'apply' methods on functions. */
+    "strictPropertyInitialization": false, /* Enable strict checking of property initialization in classes. */
+    // "noImplicitThis": true,                /* Raise error on 'this' expressions with an implied 'any' type. */
+    // "alwaysStrict": true,                  /* Parse in strict mode and emit "use strict" for each source file. */
+    /* Additional Checks */
+    // "noUnusedLocals": true,                /* Report errors on unused locals. */
+    // "noUnusedParameters": true,            /* Report errors on unused parameters. */
+    // "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
+    // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
+    /* Module Resolution Options */
+    // "moduleResolution": "node",            /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */
+    "baseUrl": "./src",                       /* Base directory to resolve non-absolute module names. */
+    "paths": {
+      "@modules/*": ["modules/*"],
+      "@config/*": ["config/*"],
+      "@shared/*": ["shared/*"],
+    },                                        /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */
+    // "rootDirs": [],                        /* List of root folders whose combined content represents the structure of the project at runtime. */
+    // "typeRoots": [],                       /* List of folders to include type definitions from. */
+    // "types": [],                           /* Type declaration files to be included in compilation. */
+    // "allowSyntheticDefaultImports": true,  /* Allow default imports from modules with no default export. This does not affect code emit, just typechecking. */
+    "esModuleInterop": true, /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    // "preserveSymlinks": true,              /* Do not resolve the real path of symlinks. */
+    // "allowUmdGlobalAccess": true,          /* Allow accessing UMD globals from modules. */
+    /* Source Map Options */
+    // "sourceRoot": "",                      /* Specify the location where debugger should locate TypeScript files instead of source locations. */
+    // "mapRoot": "",                         /* Specify the location where debugger should locate map files instead of generated locations. */
+    // "inlineSourceMap": true,               /* Emit a single file with source maps instead of having a separate file. */
+    // "inlineSources": true,                 /* Emit the source alongside the sourcemaps within a single file; requires '--inlineSourceMap' or '--sourceMap' to be set. */
+    /* Experimental Options */
+    "experimentalDecorators": true, /* Enables experimental support for ES7 decorators. */
+    "emitDecoratorMetadata": true, /* Enables experimental support for emitting type metadata for decorators. */
+    /* Advanced Options */
+    "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
+  }#!/bin/sh
+dotnet publish -c Release
+docker build -t encripta_tag_manager EncriptaTagManager/.
+}
+    "typescript": "^3.9.2"
+  }
+}
+export default routes;using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using OtpNet;
+using System.Collections.Generic;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+
+namespace EncriptaTagManager
+{
+    public static class TOTPExtensions
+    {
+        public static void UseTOTPAuthentication(this IApplicationBuilder app)
+        {
+            app.Use(async (context, next) => {
+                if (context.Request.Headers.ContainsKey("Authorization") == false)
+                {
+                    ReplyUnauthorized(context);
+                    return;
+                }
+
+                string inputTOTP = context.Request.Headers["Authorization"];
+
+                IEncriptaTagManagerSettings settings = app.ApplicationServices.GetService<IEncriptaTagManagerSettings>();
+                Totp totp = new Totp(Base32Encoding.ToBytes(settings.TOTPSecret));
+
+                VerificationWindow window = new VerificationWindow(previous: 1, future: 1);
+
+                long timeStepMatched = 0;
+                bool isValid = totp.VerifyTotp(inputTOTP, out timeStepMatched, window);
+
+                if (isValid)
+                {
+                    await next.Invoke();
+                }
+                else
+                {
+                    ReplyUnauthorized(context);
+                    return;
+                }
+            });
+        }
+
+        private static async void ReplyUnauthorized(HttpContext context, string message = "Unauthorized")
+        {
+            context.Response.StatusCode = 403;
+            context.Response.ContentType = "application/json";
+            var body = JsonSerializer.Serialize(new Dictionary<string, string>()
+                    {
+                        { "result", "NOK" },
+                        { "message", message },
+                    });
+
+            await context.Response.WriteAsync(body);
+        }
+    }FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+
+COPY bin/Release/netcoreapp3.1/publish/ App/
+WORKDIR /App
+ENTRYPOINT ["dotnet", "EncriptaTagManager.dll"]
+}
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using EncriptaTagManager.Models;
+using EncriptaTagManager.Services;
+using Microsoft.AspNetCore.Mvc;
+
+// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+
+namespace EncriptaTagManager.Controllers
+{
+    [Route("[controller]")]
+    public class UserTagController : Controller
+    {
+
+        private readonly UserTagService _userTagService;
+
+        public UserTagController(UserTagService userTagService)
+        {
+            _userTagService = userTagService;
+        }
+
+        // GET: /userTag
+        [HttpGet]
+        public IEnumerable<UserTag> Get()
+        {
+            return new UserTag[] {};
+        }
+
+        // GET /userTag/5
+        [HttpGet("{Id}")]
+        public async Task<ActionResult> Get(string Id)
+        {
+            try
+            {
+                List<UserTag> userTags = await _userTagService.GetByUserId(Id);
+                return Json(userTags);
+            } catch (Exception exception)
+            {
+                var serverErrorResponse = Json(new Dictionary<string, string>()
+                {
+                    { "result", "NOK" },
+                    { "message", exception.Message }
+                });
+
+                serverErrorResponse.StatusCode = 500;
+                return serverErrorResponse;
+            }
+        }
+
+        // GET /userTag/5/vast
+        [HttpGet("{Id}/vast")]
+        public async Task<ActionResult> GetVast(string Id)
+        {
+
+            List<UserTag> userTags;
+
+            try
+            {
+                userTags = await _userTagService.GetByUserId(Id);
+            }
+            catch (Exception exception)
+            {
+                var serverErrorResponse = Json(new Dictionary<string, string>()
+                {
+                    { "result", "NOK" },
+                    { "message", exception.Message }
+                });
+
+                serverErrorResponse.StatusCode = 500;
+                return serverErrorResponse;
+            }
+
+            if (userTags.Count == 0)
+            {
+                var notFoundResponse = Json(new Dictionary<string, string>()
+                {
+                    { "result", "NOK" },
+                    { "message", "Not Found" }
+                });
+
+                notFoundResponse.StatusCode = 404;
+                return notFoundResponse;
+            }
+
+            var dictionary = new Dictionary<string, List<string>>();
+
+            foreach (UserTag tag in userTags)
+            {
+                if (!dictionary.ContainsKey(tag.Key))
+                    dictionary[tag.Key] = new List<string>();
+
+                dictionary[tag.Key].Add(tag.Value);
+            }
+
+            string vastCustomParameters = "";
+
+            foreach (string key in dictionary.Keys)
+            {
+                List<string> values = dictionary[key];
+                string valuesJoinedByString = string.Join(",", values);
+                vastCustomParameters += $"{key}={valuesJoinedByString}";
+                vastCustomParameters += $"&";
+            }
+
+            vastCustomParameters = vastCustomParameters
+                .Replace("=", "%3D")
+                .Replace("&", "%26")
+                .Replace(",", "%2C");
+
+            Dictionary<string, string> response = new Dictionary<string, string>()
+            {
+                { "result", "OK" },
+                { "vast", vastCustomParameters }
+            };
+
+            return Json(response);
+        }
+
+
+        [HttpPost("{Id}")]
+        public async Task<IActionResult> AddTags(String Id, [FromBody] Dictionary<string, string[]> tags)
+        {
+
+            List<UserTag> inputTags = new List<UserTag>();
+
+            foreach (string key in tags.Keys)
+            {
+                string[] values = tags[key];
+                foreach (string value in values)
+                {
+                    var sha1 = SHA1.Create();
+                    string hashString = $"${Id}<>${key}<>${value}";
+                    byte[] hashData = sha1.ComputeHash(Encoding.UTF8.GetBytes(hashString));
+                    string hash = "";
+                    for (int i = 0; i < hashData.Length; i++)
+                    {
+                        hash += hashData[i].ToString("x2");
+                    }
+
+                    inputTags.Add(new UserTag()
+                    {
+                        UserId = Id,
+                        Key = key,
+                        Hash = hash,
+                        Value = value,
+                        LastSeenAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            List<UserTag> foundTags = await _userTagService.GetByHashes(inputTags.Select(iT => iT.Hash).ToArray());
+            List<string> foundTagHashes = foundTags.Select(fT => fT.Hash).ToList();
+            List<UserTag> notFoundTags = inputTags.Where(iT => foundTagHashes.Contains(iT.Hash) == false).ToList();
+
+            if (foundTagHashes.Count > 0)
+                await _userTagService.UpdateLastSeenOfMany(foundTagHashes);
+
+            if (notFoundTags.Count > 0)
+                await _userTagService.CreateMany(notFoundTags);
+
+            return Json(new Dictionary<string, string>()
+            {
+                {"result", "OK" }
+            });
+        }
+
+    }
+}
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Linq;
+using System.Threading.Tasks;
+using EncriptaTagManager.Models;
+using MongoDB.Bson;
+using MongoDB.Driver;
+
+namespace EncriptaTagManager.Services
+{
+    public class UserTagService
+    {
+        private readonly IMongoCollection<UserTag> _userTags;
+
+        public UserTagService(IEncriptaTagManagerSettings settings)
+        {
+            var client = new MongoClient(settings.ConnectionString);
+            var database = client.GetDatabase(settings.DatabaseName);
+
+            _userTags = database.GetCollection<UserTag>(settings.UserTagsCollectionName);
+
+            UserTag.CreateIndexes(_userTags);
+        }
+
+        public async Task<List<UserTag>> GetByHashes(string[] hashes) {
+            var query = from t in _userTags.AsQueryable() where (hashes.Contains(t.Hash)) select t;
+            return (await Task.FromResult(query)).ToList();
+        }
+
+        public async Task<List<UserTag>> GetByUserId(string UserId)
+        {
+            return (await _userTags.FindAsync<UserTag>(userTag => userTag.UserId == UserId)).ToList(); 
+        }
+
+        public async Task<List<UserTag>> CreateMany(List<UserTag> userTags)
+        {
+            await _userTags.InsertManyAsync(userTags);
+            return userTags;
+        }
+
+        public async void Update(string Id, UserTag NewUserTag) =>
+            await _userTags.ReplaceOneAsync(userTag => userTag.Id == Id, NewUserTag);
+
+        public async Task<UpdateResult> UpdateLastSeenOfMany(List<string> hashes)
+        {
+            var update = new BsonDocument("$set", new BsonDocument("lastSeenAt", DateTime.UtcNow));
+            var updateQ = new BsonDocument("hash", new BsonDocument("$in", BsonArray.Create(hashes)));
+            // var query = from t in _userTags.AsQueryable() where (hashes.Contains(t.Hash)) select t;
+            return await _userTags.UpdateManyAsync(updateQ, update);
+        }
+            
+        public async void Remove(string Id) =>
+            await _userTags.DeleteOneAsync(userTag => userTag.Id == Id);
+    }
+}using System;
+
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+
+using MongoDB.Driver;
+using System.Linq.Expressions;
+
+namespace EncriptaTagManager.Models
+{
+    [BsonIgnoreExtraElements]
+    public class UserTag
+    {
+        [BsonRepresentation(BsonType.ObjectId)]
+        [BsonId]
+        public String Id;
+
+        [BsonRequired]
+        [BsonElement("userId")]
+        public String UserId { get; set; }
+
+        [BsonRequired]
+        [BsonElement("key")]
+        public String Key { get; set; }
+
+        [BsonRequired]
+        [BsonElement("value")]
+        public String Value { get; set; }
+
+        [BsonRequired]
+        [BsonElement("hash")]
+        public String Hash { get; set; }
+
+        [BsonRequired]
+        [BsonElement("lastSeenAt")]
+        public DateTime LastSeenAt { get; set; }
+
+        static public void CreateIndexes(IMongoCollection<UserTag> collection)
+        {
+
+            CreateSingleIndex(collection, userTag => userTag.Hash);
+            CreateSingleIndex(collection, userTag => userTag.UserId);
+            CreateSingleIndex(collection, userTag => userTag.LastSeenAt, new CreateIndexOptions()
+            {
+                ExpireAfter = new TimeSpan(30, 0, 0, 0)
+            });
+        }
+
+        static private async void CreateSingleIndex(IMongoCollection<UserTag> collection, Expression<Func<UserTag, object>> field, CreateIndexOptions options = null) {
+            if (options == null) options = new CreateIndexOptions();
+
+            var key = Builders<UserTag>.IndexKeys.Ascending(field);
+            var model = new CreateIndexModel<UserTag>(key, options);
+
+            try
+            {
+                var index = await collection.Indexes.CreateOneAsync(model);
+            }
+            catch { }
+        }
+
+
+        public UserTag()
+        {
+        }
+    }
+}using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace EncriptaTagManagerusing System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Data.Common;
+using System.Data;
+using Truetech.Library.Message;
+using Truetech.Library.Data.Message;
+using Truetech.Library.Data.Process;
+using Truetech.Library.Data.Message.VOD;
+using Truetech.Library.Business.Metadata.Message;
+using System.Net;
+using System.IO;
+using Truetech.Library.Data.Message.VODSup;
+using System.Web;
+
+namespace Truetech.Library.Business
+{
+    public class DLicense
+    {
+        public string RawUrl { get; set; }
+        public string Url { get; set; }
+        public DateTime Date { get; set; }
+        public int ApplicationSecurityLevel { get; set; }
+        public string ClientVersion { get; set; }
+        public int RID { get; set; }
+        public int OrderItemId { get; set; }
+        public string DeviceId { get; set; }
+        public string InternalDeviceId { get; set; }
+        public bool NonPersistent { get; set; }
+        public Guid KID { get; set; }
+        public string StackTrace { get; set; }
+        public string ErrorMessage { get; set; }
+        public string CustomData { get; set; }
+        public string TransactionId { get; set; }
+        public DateTime BeginDate { get; set; }
+        public DateTime ExpirationDate { get; set; }
+        public int MinimumSecurityLevel { get; set; }
+        public int LicenseType { get; set; }
+        public double FirstPlayExpiration { get; set; }
+
+        public string Country { get; set; }
+
+        public string IP { get; set; }
+
+        public string RequestedKeyId { get; set; }
+
+        public string ResponseKeyId { get; set; }
+
+        public int UserId { get; set; }
+
+        public int IsLive { get; set; }
+    }
+
+    public class DWidevineRequest
+    {
+        public string CertSerialNumber { get; set; }
+        public long LicenseId { get; set; }
+
+        public string Request { get; set; }
+        public string Response { get; set; }
+    }
+
+    public class DLicenseFairPlay
+    {
+        public string SpcRawDataString { get; set; }
+        public string SpcRawDataHex { get; set; }
+    }
+    public class DLicenseCertificate
+    {
+        public long Id { get; set; }
+        public long LicenseId { get; set; }
+        public int BindingKeyType { get; set; }
+        public DateTime ExpirationDate { get; set; }
+        public string ManufacturerName { get; set; }
+        public string ModelName { get; set; }
+        public string ModelNumber { get; set; }
+        public int SecurityLevel { get; set; }
+        public string Type { get; set; }
+        public string UplinkKeyId { get; set; }
+        public string Chain_1_DigestValue { get; set; }
+        public string Chain_1_ManufacturerName { get; set; }
+        public string Chain_1_ModelName { get; set; }
+        public string Chain_1_ModelNumber { get; set; }
+        public string Chain_2_DigestValue { get; set; }
+        public string Chain_2_ManufacturerName { get; set; }
+        public string Chain_2_ModelName { get; set; }
+        public string Chain_2_ModelNumber { get; set; }
+        public string Chain_3_DigestValue { get; set; }
+        public string Chain_3_ManufacturerName { get; set; }
+        public string Chain_3_ModelName { get; set; }
+        public string Chain_3_ModelNumber { get; set; }
+        public string Chain_4_DigestValue { get; set; }
+        public string Chain_4_ManufacturerName { get; set; }
+        public string Chain_4_ModelName { get; set; }
+        public string Chain_4_ModelNumber { get; set; }
+        public string Chain_5_DigestValue { get; set; }
+        public string Chain_5_ManufacturerName { get; set; }
+        public string Chain_5_ModelName { get; set; }
+        public string Chain_5_ModelNumber { get; set; }
+        public string Chain_6_DigestValue { get; set; }
+        public string Chain_6_ManufacturerName { get; set; }
+        public string Chain_6_ModelName { get; set; }
+        public string Chain_6_ModelNumber { get; set; }
+
+    }
+
+
+    public class BLicenses
+    {
+        public enum DomainRegistrationStatus
+        {
+            Success = 1,
+            Exceeded = 2,
+            MachineIdAlreadyExists = 3,
+            AliasAlreadyExists = 4,
+            AliasDoesNotExists = 5
+        }
+
+        protected int RID;
+
+        public BLicenses(int RID)
+        {
+            this.RID = RID;
+        }
+
+        public bool IsLiveContentAuthorized(Guid guid)
+        {
+            TSkyLiveContent tSkyLiveContent = new PTSkyLiveContent(0).Get(guid);
+
+            if (tSkyLiveContent == null)
+                return false;
+            else
+                return true;
+        }
+
+
+        public DomainRegistrationStatus UnRegisterDomain(int userId, string machineAlias)
+        {
+            if (machineAlias == null) machineAlias = "";
+            machineAlias = machineAlias.Trim();
+
+            PTRegisteredDevice process = new PTRegisteredDevice(this.RID);
+
+            List<TRegisteredDevice> tRegisteredDevices = process.List(userId);
+
+            TRegisteredDevice tRegisteredDevice = tRegisteredDevices.FirstOrDefault(x => string.Compare(x.machineAlias, machineAlias, true) == 0);
+
+            if (tRegisteredDevice == null)
+                return DomainRegistrationStatus.AliasDoesNotExists;
+            else
+            {
+                process.Delete(tRegisteredDevice);
+
+                if (RID != RIDS.SKY)
+                {
+                    this.DisableAllDevices(userId, tRegisteredDevice.machineId);
+                }
+
+               
+
+                return DomainRegistrationStatus.Success;
+            }
+        }
+
+        public List<DDomains> ListDomains(int userId)
+        {
+
+            PTRegisteredDevice process = new PTRegisteredDevice(this.RID);
+
+            List<TRegisteredDevice> tRegisteredDevice = process.List(userId);
+
+            if (tRegisteredDevice.Count == 0) return new List<DDomains>();
+
+            List<DDomains> list = new List<DDomains>();
+
+            foreach (TRegisteredDevice tDevices in tRegisteredDevice)
+            {
+                DDomains dDomain = new DDomains();
+                dDomain.Alias = tDevices.machineAlias;
+                dDomain.Date = tDevices.date;
+                dDomain.MachineID = tDevices.machineId;
+
+                list.Add(dDomain);
+            }
+
+            return list;
+        }
+
+        public int CountDomains(int userId, string machineId)
+        {
+            PTRegisteredDevice process = new PTRegisteredDevice(this.RID);
+
+            return process.Count(userId, machineId);
+        }
+
+        public void AddLicenseAcquistionBell(int orderItemId, string machineId, string internalDeviceId, int source)
+        {
+            PTSkyLicenseAcquistionBell process = new PTSkyLicenseAcquistionBell(RIDS.SKY);
+
+            TSkyLicenseAcquistionBell tBell = process.Get(orderItemId);
+
+            if (tBell == null)
+            {
+                tBell = new TSkyLicenseAcquistionBell();
+                tBell.acquisitonDate = DateTime.Now;
+                tBell.internalDeviceId = internalDeviceId;
+                tBell.machineId = machineId;
+                tBell.message = "";
+                tBell.postDate = null;
+                tBell.result = "";
+                tBell.source = source;
+                tBell.orderItemId = orderItemId;
+                //tBell.TOrderItemReference = new EntityReference<TOrderItem>();
+                //tBell.TOrderItemReference.EntityKey = new EntityKey("DB.TOrderItem", "Id", orderItemId);
+
+                if (tBell.internalDeviceId == null) tBell.internalDeviceId = "";
+                if (tBell.machineId == null) tBell.machineId = "";
+
+                process.Update(tBell);
+
+                try
+                {
+                    if (tBell.source == 2)
+                    {
+                        RegisterLicenseAcquistionInSky(tBell.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    BLog bLog = new BLog();
+                    bLog.Add("BELLSKY", ex.Message);
+                }
+            }
+        }
+
+        public void RegisterLicenseAcquistionInSky(int skyBellId)
+        {
+            PTSkyLicenseAcquistionBell processSkyBell = new PTSkyLicenseAcquistionBell(88);
+
+            TSkyLicenseAcquistionBell tBell = processSkyBell.GetById(skyBellId);
+
+            if (tBell != null)
+            {
+                PTOrderItem processOrderItem = new PTOrderItem(RIDS.SKY);
+
+                TOrderItem tOrderItem = processOrderItem.Get(tBell.TOrderItem.Id);
+
+                string url = "http://www1.skyonline.com.br/login/registrarplay";
+
+                string parameters = "contentid={0}&assinatura={1}&idcontaacesso={2}&chave=3f6e0773-af68-46eb-91e6-b4ac2af08af1";
+
+                BUsers bUsers = BUsers.Instance(RIDS.SKY);
+
+                MUsers mUsers = bUsers.Get(tOrderItem.TOrder.TUser.Id);
+
+                string idContaAcesso = bUsers.GetData(mUsers.UserId, BUsers.SKY_CONTA_ACESSO);
+
+                if (idContaAcesso != null)
+                {
+                    parameters = string.Format(
+                        parameters,
+                        tOrderItem.mediaId,
+                        mUsers.RetailerUserId,
+                        idContaAcesso);
+
+                    string message;
+                    string result;
+
+                    try
+                    {
+                        PostData(url, parameters, out message, out result);
+                    }
+                    catch (Exception ex)
+                    {
+                        message = ex.Message;
+                        result = "ERROR";
+                    }
+
+                    tBell.postDate = DateTime.Now;
+                    tBell.result = result;
+                    tBell.message = message;
+
+                    processSkyBell.Update(tBell);
+                }
+            }
+        }
+
+        private void PostData(string url, string postData, out string message, out string result)
+        {
+            HttpWebRequest request = null;
+
+            Uri uri = new Uri(url);
+
+            request = (HttpWebRequest)WebRequest.Create(uri);
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+
+
+            byte[] bytesToWrite = null;
+            using (Stream str = new MemoryStream())
+            {
+                UTF8Encoding encoding = new UTF8Encoding();
+
+                bytesToWrite = encoding.GetBytes(postData);
+            }
+
+            request.ContentLength = bytesToWrite.Length;
+
+            using (Stream writeStream = request.GetRequestStream())
+            {
+                writeStream.Write(bytesToWrite, 0, bytesToWrite.Length);
+            }
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                result = response.StatusCode.ToString();
+
+                using (Stream responseStream = response.GetResponseStream())
+                {
+                    using (StreamReader readStream = new StreamReader(responseStream, Encoding.UTF8))
+                    {
+                        message = readStream.ReadToEnd();
+                    }
+                }
+            }
+        }
+
+        public DomainRegistrationStatus ForceRegisterDomain(int userId, string machineAlias, string machineId, bool ignoreDate)
+        {
+            int maxDomains = 3;
+
+            if (machineAlias == null) machineAlias = "";
+            machineAlias = machineAlias.Trim();
+
+            if (machineId == null) machineId = "";
+            machineId = machineId.Trim();
+
+            PTRegisteredDevice process = new PTRegisteredDevice(this.RID);
+
+            if (RID == RIDS.SKY)
+            {
+                BUsers bUsers = BUsers.Instance(RIDS.SKY);
+                string value = bUsers.GetData(userId, BUsers.SKY_DOMAINS_EXCEPTION);
+
+                int maxDomainParse;
+                if (Int32.TryParse(value, out maxDomainParse))
+                {
+                    maxDomains = maxDomainParse;
+                }
+                else
+                {
+                    value = new Config().Get("SKY_MAX_DOMAINS_PER_USER");
+
+                    if (Int32.TryParse(value, out maxDomainParse))
+                    {
+                        maxDomains = maxDomainParse;
+                    }
+                }
+            }
+            else
+            {
+                maxDomains = 30;
+
+                var bPartnerUsers = new BPartnerUsers(RID);
+                if (bPartnerUsers.IsPartnerUser(userId))
+                {
+                    DPartnerUser partnerUser = bPartnerUsers.Get(userId);
+                    machineAlias = partnerUser.Alias;
+                    machineId = partnerUser.MachineId;
+                    maxDomains = int.MaxValue;
+                }
+            }
+
+            List<TRegisteredDevice> tRegisteredDevice = process.List(userId);
+
+            int countMachineId = tRegisteredDevice.Count(x => string.Compare(x.machineId, machineId, true) == 0);
+
+            //se já está registrado, sucesso
+            if (countMachineId != 0)
+            {
+                this.EnableAllDevices(userId, machineId);
+
+                return DomainRegistrationStatus.Success;
+            }
+            else if (tRegisteredDevice.Count < maxDomains)
+            {
+                return RegisterAndIncrementAlias(userId, machineAlias, machineId, process, tRegisteredDevice);
+            }
+            else
+            {
+                if (ignoreDate == true)
+                {
+                    /* nao excede nunca */
+                    var veryOldDomain = tRegisteredDevice.First();
+
+                    this.DisableAllDevices(userId, veryOldDomain.machineId);
+
+                    process.Delete(veryOldDomain);
+
+                    return RegisterAndIncrementAlias(userId, machineAlias, machineId, process, tRegisteredDevice);
+                }
+                else
+                {
+                    var veryOldDomain = tRegisteredDevice.Where(x => x.date <= DateTime.Now.AddDays(-5)).FirstOrDefault();
+
+                    if (veryOldDomain == null)
+                        return DomainRegistrationStatus.Exceeded;
+
+                    this.DisableAllDevices(userId, veryOldDomain.machineId);
+
+                    process.Delete(veryOldDomain);
+
+                    return RegisterAndIncrementAlias(userId, machineAlias, machineId, process, tRegisteredDevice);
+                }
+            }
+        }
+
+        public DomainRegistrationStatus ForceRegisterDomain(int userId, string machineAlias, string machineId)
+        {
+            return this.ForceRegisterDomain(userId, machineAlias, machineId, false);
+        }
+
+        private DomainRegistrationStatus RegisterAndIncrementAlias(
+            int userId,
+            string machineAlias,
+            string machineId,
+            PTRegisteredDevice process,
+            List<TRegisteredDevice> tRegisteredDevice)
+        {
+            int countAlias = tRegisteredDevice.Count(x => string.Compare(x.machineAlias, machineAlias, true) == 0);
+
+            if (countAlias == 0)
+            {
+                TRegisteredDevice tDevice = new TRegisteredDevice();
+
+                tDevice.date = DateTime.Now;
+                tDevice.machineAlias = machineAlias;
+                tDevice.machineId = machineId;
+                tDevice.userId = userId;
+
+                process.Add(tDevice);
+
+                return DomainRegistrationStatus.Success;
+            }
+
+            int count = 2;
+            int countFor = 0;
+
+            do
+            {
+                countFor++;
+
+                string newAlias;
+
+                //apenas para nao entrar em loop infinito
+                if (countFor > 130)
+                {
+                    newAlias = string.Format("{0} ({1})", machineAlias, Guid.NewGuid().ToString().Substring(5));
+                }
+                else
+                {
+                    newAlias = string.Format("{0} ({1})", machineAlias, count);
+                }
+
+                countAlias = tRegisteredDevice.Count(x => string.Compare(x.machineAlias, newAlias, true) == 0);
+
+                //se o alias ainda existe incrementa
+                if (countAlias != 0)
+                {
+                    count++;
+                    continue;
+                }
+                else
+                {
+                    TRegisteredDevice tDevice = new TRegisteredDevice();
+
+                    tDevice.date = DateTime.Now;
+                    tDevice.machineAlias = newAlias;
+                    tDevice.machineId = machineId;
+                    tDevice.userId = userId;
+
+                    process.Add(tDevice);
+
+                    this.EnableAllDevices(userId, machineId);
+
+                    return DomainRegistrationStatus.Success;
+                }
+            }
+            while (true);
+        }
+
+        public DomainRegistrationStatus RegisterDomain(int userId, string machineAlias, string machineId)
+        {
+            int maxDomains = 3;
+
+            if (machineAlias == null) machineAlias = "";
+            machineAlias = machineAlias.Trim();
+
+            if (machineId == null) machineId = "";
+            machineId = machineId.Trim();
+
+            PTRegisteredDevice process = new PTRegisteredDevice(this.RID);
+
+            if (RID == RIDS.SKY)
+            {
+                BUsers bUsers = BUsers.Instance(RIDS.SKY);
+                string value = bUsers.GetData(userId, BUsers.SKY_DOMAINS_EXCEPTION);
+
+                int maxDomainParse;
+                if (Int32.TryParse(value, out maxDomainParse))
+                {
+                    maxDomains = maxDomainParse;
+                }
+                else
+                {
+                    value = new Config().Get("SKY_MAX_DOMAINS_PER_USER");
+                    if (Int32.TryParse(value, out maxDomainParse))
+                    {
+                        maxDomains = maxDomainParse;
+                    }
+
+                }
+            }
+            else
+            {
+                maxDomains = 30;
+
+                var bPartnerUsers = new BPartnerUsers(RID);
+                if (bPartnerUsers.IsPartnerUser(userId))
+                {
+                    DPartnerUser partnerUser = bPartnerUsers.Get(userId);
+                    machineAlias = partnerUser.Alias;
+                    machineId = partnerUser.MachineId;
+                    maxDomains = int.MaxValue;
+                }
+            }
+
+            List<TRegisteredDevice> tRegisteredDevice = process.List(userId);
+
+            int countMachineId = tRegisteredDevice.Count(x => string.Compare(x.machineId, machineId, true) == 0);
+            int countAlias = tRegisteredDevice.Count(x => string.Compare(x.machineAlias, machineAlias, true) == 0);
+
+            if (countMachineId != 0)
+                return DomainRegistrationStatus.MachineIdAlreadyExists;
+            else if (countAlias != 0)
+                return DomainRegistrationStatus.AliasAlreadyExists;
+            else
+            {
+                if (tRegisteredDevice.Count >= maxDomains)
+                {
+                    return DomainRegistrationStatus.Exceeded;
+                }
+
+                TRegisteredDevice tDevice = new TRegisteredDevice();
+
+                tDevice.date = DateTime.Now;
+                tDevice.machineAlias = machineAlias;
+                tDevice.machineId = machineId;
+                tDevice.userId = userId;
+
+                process.Add(tDevice);
+
+                if (RID != RIDS.SKY)
+                {
+                    this.EnableAllDevices(userId, machineId);
+                }
+
+               
+
+                return DomainRegistrationStatus.Success;
+            }
+        }
+
+
+        public void Add(
+            int orderItemId,
+            string deviceId,
+            string internalDeviceId,
+            string machineType,
+            string marchineModel,
+            string certificates)
+        {
+            if (machineType == null) machineType = "";
+            if (marchineModel == null) marchineModel = "";
+            if (certificates == null) certificates = "";
+
+            PTDevice ptDevice = new PTDevice(0);
+
+            List<TDevice> tDevices = ptDevice.ListByOrderItem(orderItemId, internalDeviceId);
+
+            if (tDevices == null || tDevices.Count == 0)
+            {
+                TDevice tDevice = new TDevice();
+                tDevice.date = DateTime.Now;
+                tDevice.deviceId = deviceId;
+                tDevice.internalDeviceId = internalDeviceId;
+                tDevice.status = 1;
+                tDevice.orderItemId = orderItemId;
+                //tDevice.TOrderItemReference = new EntityReference<TOrderItem>();
+                //tDevice.TOrderItemReference.EntityKey = new EntityKey("DB.TOrderItem", "Id", orderItemId);
+                tDevice.machineType = machineType;
+                tDevice.marchineModel = marchineModel;
+                tDevice.certificates = certificates;
+
+                ptDevice.Add(tDevice);
+            }
+        }
+
+        public void AddSuccess(int transactionId, int userId, string deviceId, string internalDeviceId)
+        {
+            if (deviceId == null) deviceId = "";
+
+            using (Data.Connections.VODDatabase database = new Data.Connections.VODDatabase())
+            {
+                try
+                {
+                    bool add = false;
+                    database.CreateStoredProcCommand("[P_GetLicense]");
+
+                    database.AddInParameter("@TransactionId", DbType.Int32, transactionId);
+                    database.AddInParameter("@DeviceId", DbType.String, deviceId);
+
+                    IDataReader reader = database.ExecuteReader();
+
+                    if (reader.Read())
+                    {
+                        add = true;
+                    }
+
+                    reader.Close();
+
+                    if (!add)
+                    {
+                        database.CreateStoredProcCommand("[P_AddLicense]");
+
+                        database.AddInParameter("@TransactionId", DbType.Int32, transactionId);
+                        database.AddInParameter("@DeviceId", DbType.String, deviceId);
+                        database.AddInParameter("@InternalDeviceId", DbType.String, internalDeviceId);
+
+                        database.ExecuteNonQuery();
+                    }
+                    else
+                    {
+                        database.CreateStoredProcCommand("[P_UpdateLicense]");
+
+                        database.AddInParameter("@TransactionId", DbType.Int32, transactionId);
+                        database.AddInParameter("@DeviceId", DbType.String, deviceId);
+                        database.AddInParameter("@InternalDeviceId", DbType.String, internalDeviceId);
+
+                        database.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (database.SqlConnection != null)
+                        System.Data.SqlClient.SqlConnection.ClearPool(database.SqlConnection);
+
+                    Truetech.Library.Data.Connections.InformError();
+                    throw ex;
+                }
+            }
+        }
+
+        public static Device VerifyDevice(string st)
+        {
+            if (st.Length == 17)
+            {
+                return Device.Onvideo;
+            }
+            else if (st.Length == 8)
+            {
+                return Device.PC;
+            }
+            else if (st.Length >= 3 && st.Substring(0, 3) == "MAC")
+            {
+                return Device.MAC;
+            }
+            else if (st.Length >= 2 && st.Substring(0, 2) == "PC")
+            {
+                return Device.PC;
+            }
+            else if (st.Length >= 2 && st.Substring(0, 2) == "LG")
+            {
+                return Device.LG;
+            }
+            else if (st.Length >= 3 && st.Substring(0, 3) == "SS:")
+            {
+                return Device.Samsung;
+            }
+            else
+            {
+                return Device.Unknown;
+            }
+
+        }
+
+        public static DRMTypes VerifyDRMTypes(string st)
+        {
+            if (st.Length == 17)
+            {
+                return DRMTypes.WMDRM;
+            }
+            else if (st.Length == 8)
+            {
+                return DRMTypes.WMDRM;
+            }
+            else if (st.Length >= 3 && st.Substring(0, 3) == "MAC")
+            {
+                return DRMTypes.PR;
+            }
+            else if (st.Length >= 2 && st.Substring(0, 2) == "PC")
+            {
+                return DRMTypes.PR;
+            }
+            else if (st.Length >= 2 && st.Substring(0, 2) == "LG")
+            {
+                return DRMTypes.WMDRM;
+            }
+            else if (st.Length >= 3 && st.Substring(0, 3) == "SS:")
+            {
+                return DRMTypes.WMDRM;
+            }
+            else
+            {
+                return DRMTypes.PR;
+            }
+        }
+
+        private void EnableAllDevices(int userId, string internalMachineId)
+        {
+            PTDevice ptDevice = new PTDevice(this.RID);
+
+            ptDevice.UpdateStatusByMachineID(userId, internalMachineId, 1);
+        }
+
+        internal void DisableAllDevices(int userId, string internalMachineId)
+        {
+            PTDevice ptDevice = new PTDevice(this.RID);
+
+            ptDevice.UpdateStatusByMachineID(userId, internalMachineId, 0);
+        }
+
+        internal void DisableAllDevices(int orderItemId)
+        {
+
+            //using (PTDeviceTransactional process = new PTDeviceTransactional(this.RID))
+            //{
+            //    process.BeginTransaction();
+
+            PTDevice ptDevice = new PTDevice(this.RID);
+            List<TDevice> tDevices = ptDevice.List(orderItemId);
+
+            foreach (TDevice tDevice in tDevices)
+            {
+                if (tDevice.status == 1)
+                {
+                    tDevice.status = 0;
+                    new PTDevice(this.RID).Update(tDevice);
+                }
+            }
+
+            //     process.CommitTransaction();
+            // }
+        }
+
+        public static void AddLog(DLicense dLicense, DLicenseCertificate dLicenseCertificate)
+        {
+            BLicenses.AddLog(dLicense, dLicenseCertificate, null, null);
+        }
+
+        public static void AddLog(DLicense dLicense, DLicenseFairPlay dLicenseFairPlay)
+        {
+            BLicenses.AddLog(dLicense, null, null, dLicenseFairPlay);
+        }
+
+        public static void AddLog(DLicense dLicense, DLicenseCertificate dLicenseCertificate, DWidevineRequest dWidevineRequest, DLicenseFairPlay dLicenseFairPlay)
+        {
+            long id = AddLog(dLicense);
+
+            if (dLicense.OrderItemId > 0)
+            {
+                try
+                {
+                    TLicenseUserAgent t = new TLicenseUserAgent();
+                    t.orderItemId = dLicense.OrderItemId;
+                    t.RID = dLicense.RID;
+                    t.userAgent = "";
+                    t.date = DateTime.Now;
+                    t.chain_1_ModelNumber = "";
+                    t.licenseId = id;
+
+                    if (dLicenseCertificate != null && dLicenseCertificate.Chain_1_ModelNumber != null)
+                        t.chain_1_ModelNumber = dLicenseCertificate.Chain_1_ModelNumber;
+
+                    if (HttpContext.Current != null && HttpContext.Current.Request != null && HttpContext.Current.Request.UserAgent != null)
+                        t.userAgent = HttpContext.Current.Request.UserAgent;
+
+                    PTLicense ptLicense = new PTLicense();
+                    ptLicense.Add(t);
+
+                }
+                catch (Exception ex)
+                {
+                    BLog b = new BLog();
+                    b.Add("USERAGENT", ex.Message, ex.StackTrace);
+                }
+
+            }
+            if (dWidevineRequest != null)
+            {
+                TLicenseWidevineRequest tLicenseWidevineRequest = new TLicenseWidevineRequest();
+
+                if (dWidevineRequest.CertSerialNumber == null) dWidevineRequest.CertSerialNumber = "";
+                if (dWidevineRequest.Request == null) dWidevineRequest.Request = "";
+                if (dWidevineRequest.Response == null) dWidevineRequest.Response = "";
+
+                tLicenseWidevineRequest.request = dWidevineRequest.Request;
+                tLicenseWidevineRequest.response = dWidevineRequest.Response;
+                tLicenseWidevineRequest.certSerialNumber = dWidevineRequest.CertSerialNumber;
+
+                AddLicenseReference(id, tLicenseWidevineRequest);
+
+                PTLicenseWidevineRequest process = new PTLicenseWidevineRequest();
+                process.Add(tLicenseWidevineRequest);
+            }
+
+            if (dLicenseFairPlay != null)
+            {
+                TLicenseFairPlay tLicenseFairPlay = new TLicenseFairPlay();
+
+                if (dLicenseFairPlay.SpcRawDataHex == null) dLicenseFairPlay.SpcRawDataHex = "";
+                if (dLicenseFairPlay.SpcRawDataString == null) dLicenseFairPlay.SpcRawDataString = "";
+
+                tLicenseFairPlay.licenseId = id;
+                tLicenseFairPlay.spcRawDataHex = dLicenseFairPlay.SpcRawDataHex;
+                tLicenseFairPlay.spcRawDataString = dLicenseFairPlay.SpcRawDataString;
+
+
+                PTLicenseFairPlay process = new PTLicenseFairPlay();
+                process.Add(tLicenseFairPlay);
+            }
+
+            if (dLicenseCertificate != null)
+            {
+                SetNull(dLicenseCertificate);
+
+                TLicenseCertificate tLicense = new TLicenseCertificate();
+
+                tLicense.Id = dLicenseCertificate.Id;
+                tLicense.bindingKeyType = dLicenseCertificate.BindingKeyType;
+                tLicense.expirationDate = dLicenseCertificate.ExpirationDate;
+                tLicense.manufacturerName = dLicenseCertificate.ManufacturerName;
+                tLicense.modelName = dLicenseCertificate.ModelName;
+                tLicense.modelNumber = dLicenseCertificate.ModelNumber;
+                tLicense.securityLevel = dLicenseCertificate.SecurityLevel;
+                tLicense.type = dLicenseCertificate.Type;
+                tLicense.uplinkKeyId = dLicenseCertificate.UplinkKeyId;
+                tLicense.chain_1_DigestValue = dLicenseCertificate.Chain_1_DigestValue;
+                tLicense.chain_1_ManufacturerName = dLicenseCertificate.Chain_1_ManufacturerName;
+                tLicense.chain_1_ModelName = dLicenseCertificate.Chain_1_ModelName;
+                tLicense.chain_1_ModelNumber = dLicenseCertificate.Chain_1_ModelNumber;
+                tLicense.chain_2_DigestValue = dLicenseCertificate.Chain_2_DigestValue;
+                tLicense.chain_2_ManufacturerName = dLicenseCertificate.Chain_2_ManufacturerName;
+                tLicense.chain_2_ModelName = dLicenseCertificate.Chain_2_ModelName;
+                tLicense.chain_2_ModelNumber = dLicenseCertificate.Chain_2_ModelNumber;
+                tLicense.chain_3_DigestValue = dLicenseCertificate.Chain_3_DigestValue;
+                tLicense.chain_3_ManufacturerName = dLicenseCertificate.Chain_3_ManufacturerName;
+                tLicense.chain_3_ModelName = dLicenseCertificate.Chain_3_ModelName;
+                tLicense.chain_3_ModelNumber = dLicenseCertificate.Chain_3_ModelNumber;
+                tLicense.chain_4_DigestValue = dLicenseCertificate.Chain_4_DigestValue;
+                tLicense.chain_4_ManufacturerName = dLicenseCertificate.Chain_4_ManufacturerName;
+                tLicense.chain_4_ModelName = dLicenseCertificate.Chain_4_ModelName;
+                tLicense.chain_4_ModelNumber = dLicenseCertificate.Chain_4_ModelNumber;
+                tLicense.chain_5_DigestValue = dLicenseCertificate.Chain_5_DigestValue;
+                tLicense.chain_5_ManufacturerName = dLicenseCertificate.Chain_5_ManufacturerName;
+                tLicense.chain_5_ModelName = dLicenseCertificate.Chain_5_ModelName;
+                tLicense.chain_5_ModelNumber = dLicenseCertificate.Chain_5_ModelNumber;
+                tLicense.chain_6_DigestValue = dLicenseCertificate.Chain_6_DigestValue;
+                tLicense.chain_6_ManufacturerName = dLicenseCertificate.Chain_6_ManufacturerName;
+                tLicense.chain_6_ModelName = dLicenseCertificate.Chain_6_ModelName;
+                tLicense.chain_6_ModelNumber = dLicenseCertificate.Chain_6_ModelNumber;
+
+                AddLicenseReference(id, tLicense);
+
+                PTLicenseCertificate process = new PTLicenseCertificate();
+                process.Add(tLicense);
+            }
+        }
+
+        private static void SetNull(DLicenseCertificate dLicenseCertificate)
+        {
+            if (dLicenseCertificate.ExpirationDate.Year < 1900)
+                dLicenseCertificate.ExpirationDate = new DateTime(1900, 01, 01);
+
+            if (dLicenseCertificate.ExpirationDate.Year > 2999)
+                dLicenseCertificate.ExpirationDate = new DateTime(2049, 01, 01);
+
+            if (dLicenseCertificate.ManufacturerName == null)
+                dLicenseCertificate.ManufacturerName = "";
+
+            if (dLicenseCertificate.ModelName == null)
+                dLicenseCertificate.ModelName = "";
+
+            if (dLicenseCertificate.ModelNumber == null)
+                dLicenseCertificate.ModelNumber = "";
+
+            if (dLicenseCertificate.Type == null)
+                dLicenseCertificate.Type = "";
+
+            if (dLicenseCertificate.UplinkKeyId == null)
+                dLicenseCertificate.UplinkKeyId = "";
+
+            if (dLicenseCertificate.Chain_1_DigestValue == null)
+                dLicenseCertificate.Chain_1_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_1_ManufacturerName == null)
+                dLicenseCertificate.Chain_1_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_1_ModelName == null)
+                dLicenseCertificate.Chain_1_ModelName = "";
+
+            if (dLicenseCertificate.Chain_1_ModelNumber == null)
+                dLicenseCertificate.Chain_1_ModelNumber = "";
+
+            if (dLicenseCertificate.Chain_2_DigestValue == null)
+                dLicenseCertificate.Chain_2_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_2_ManufacturerName == null)
+                dLicenseCertificate.Chain_2_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_2_ModelName == null)
+                dLicenseCertificate.Chain_2_ModelName = "";
+
+            if (dLicenseCertificate.Chain_2_ModelNumber == null)
+                dLicenseCertificate.Chain_2_ModelNumber = "";
+
+            if (dLicenseCertificate.Chain_3_DigestValue == null)
+                dLicenseCertificate.Chain_3_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_3_ManufacturerName == null)
+                dLicenseCertificate.Chain_3_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_3_ModelName == null)
+                dLicenseCertificate.Chain_3_ModelName = "";
+
+            if (dLicenseCertificate.Chain_3_ModelNumber == null)
+                dLicenseCertificate.Chain_3_ModelNumber = "";
+
+            if (dLicenseCertificate.Chain_4_DigestValue == null)
+                dLicenseCertificate.Chain_4_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_4_ManufacturerName == null)
+                dLicenseCertificate.Chain_4_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_4_ModelName == null)
+                dLicenseCertificate.Chain_4_ModelName = "";
+
+            if (dLicenseCertificate.Chain_4_ModelNumber == null)
+                dLicenseCertificate.Chain_4_ModelNumber = "";
+
+            if (dLicenseCertificate.Chain_5_DigestValue == null)
+                dLicenseCertificate.Chain_5_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_5_ManufacturerName == null)
+                dLicenseCertificate.Chain_5_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_5_ModelName == null)
+                dLicenseCertificate.Chain_5_ModelName = "";
+
+            if (dLicenseCertificate.Chain_5_ModelNumber == null)
+                dLicenseCertificate.Chain_5_ModelNumber = "";
+
+            if (dLicenseCertificate.Chain_6_DigestValue == null)
+                dLicenseCertificate.Chain_6_DigestValue = "";
+
+            if (dLicenseCertificate.Chain_6_ManufacturerName == null)
+                dLicenseCertificate.Chain_6_ManufacturerName = "";
+
+            if (dLicenseCertificate.Chain_6_ModelName == null)
+                dLicenseCertificate.Chain_6_ModelName = "";
+
+            if (dLicenseCertificate.Chain_6_ModelNumber == null)
+                dLicenseCertificate.Chain_6_ModelNumber = "";
+        }
+
+        private static void AddLicenseReference(long licenseId, TLicenseWidevineRequest tLicenseWidevineRequest)
+        {
+            tLicenseWidevineRequest.licenseId = licenseId;
+            //if (tLicenseWidevineRequest.TLicenseReference == null)
+            //{
+            //    tLicenseWidevineRequest.TLicenseReference = new EntityReference<TLicense>();
+            //    tLicenseWidevineRequest.TLicenseReference.EntityKey = new EntityKey("DB.TLicense", "id", licenseId);
+            //}
+            //else
+            //{
+            //    tLicenseWidevineRequest.TLicenseReference.EntityKey = new EntityKey("DB.TLicense", "id", licenseId);
+            //}
+        }
+
+        private static void AddLicenseReference(long licenseId, TLicenseCertificate tLicenseCertificate)
+        {
+            tLicenseCertificate.licenseId = licenseId;
+            //if (tLicenseCertificate.TLicenseReference == null)
+            //{
+            //    tLicenseCertificate.TLicenseReference = new EntityReference<TLicense>();
+            //    tLicenseCertificate.TLicenseReference.EntityKey = new EntityKey("DB.TLicense", "id", licenseId);
+            //}
+            //else
+            //{
+            //    tLicenseCertificate.TLicenseReference.EntityKey = new EntityKey("DB.TLicense", "id", licenseId);
+            //}
+        }
+
+        public static long AddLog(DLicense dLicense)
+        {
+            PTLicense process = new PTLicense();
+
+            TLicense t = new TLicense();
+            t.rawUrl = dLicense.RawUrl;
+            t.country = dLicense.Country;
+            t.url = dLicense.Url;
+            t.date = dLicense.Date;
+            t.ip = dLicense.IP;
+            t.applicationSecurityLevel = dLicense.ApplicationSecurityLevel;
+            t.clientVersion = dLicense.ClientVersion;
+            t.RID = dLicense.RID;
+            t.orderItemId = dLicense.OrderItemId;
+            t.deviceId = dLicense.DeviceId;
+            t.internalDeviceId = dLicense.InternalDeviceId;
+            t.nonPersistent = dLicense.NonPersistent;
+            t.KID = dLicense.KID;
+            t.stackTrace = dLicense.StackTrace;
+            t.errorMessage = dLicense.ErrorMessage;
+            t.customData = dLicense.CustomData;
+            t.transactionId = dLicense.TransactionId;
+
+            t.beginDate = dLicense.BeginDate;
+            if (t.beginDate == DateTime.MinValue)
+                t.beginDate = null;
+
+            t.expirationDate = dLicense.ExpirationDate;
+            if (t.expirationDate == DateTime.MinValue)
+                t.expirationDate = null;
+
+            t.requestedKeyId = dLicense.RequestedKeyId;
+            t.responseKeyId = dLicense.ResponseKeyId;
+
+            t.minimumSecurityLevel = dLicense.MinimumSecurityLevel;
+            t.licenseType = dLicense.LicenseType;
+            t.firstPlayExpiration = Convert.ToDecimal(dLicense.FirstPlayExpiration);
+            t.userId = dLicense.UserId;
+            t.isLive = dLicense.IsLive;
+
+            long id = process.Add(t);
+
+            return id;
+        }
+
+        public void AddSonyClientIDRequest(string sonyGuid, string playReadyGuid)
+        {
+            PTDeviceSonyClientID process = new PTDeviceSonyClientID(0);
+            process.Add(sonyGuid, playReadyGuid);
+        }
+
+        public string GetSonyClientID(string guid)
+        {
+            PTDeviceSonyClientID process = new PTDeviceSonyClientID(0);
+
+            TDeviceSonyClientID tDevice = process.Get(guid);
+
+            if (tDevice == null)
+                return "";
+            else
+            {
+                tDevice.status = 1;
+                process.Update(tDevice);
+                return tDevice.playReadyGuid;
+            }
+        }
+
+        //public string GetSonyClientID(string guid)
+        //{
+        //    PTDeviceSonyClientID process = new PTDeviceSonyClientID(0);
+
+        //    TDeviceSonyClientID tDevice = process.Get(guid);
+
+        //    if (tDevice == null)
+        //    {
+        //        var playReadyGuid = Guid.NewGuid().ToString();
+        //        AddSonyClientIDRequest(guid, playReadyGuid);
+        //    }
+
+        //    tDevice = process.Get(guid);
+        //    tDevice.status = 1;
+        //    process.Update(tDevice);
+        //    return tDevice.playReadyGuid;
+
+        //}
+    }
+}
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Data;
+using Truetech.Library.Data.Message.VOD;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Web;
+using Truetech.Library.Business.Purchase;
+using Truetech.Library.Data;
+using Truetech.Library.Data.Message;
+using Truetech.Library.Data.Process;
+using Truetech.Library.Message;
+using Truetech.Library.Message.NetClaro;
+using Truetech.Library.Business.Email;
+using Truetech.Library.Business.Profile;
+using System.Data.Entity.Infrastructure;
+using System.Data.SqlClient;
+using System.Data.Entity.Validation;
+
+namespace Truetech.Library.Business
+{
+    public abstract class BUsers
+    {
+        protected int RID;
+        private BUsers() { }
+
+        //private static int RID = 0;
+        public int GetRID()
+        {
+            return this.RID;
+        }
+
+        protected BUsers(int rid)
+        {
+            this.RID = rid;
+        }
+
+
+        public const string CARD_NAME = "seguro_name";
+        public const string CARD_NUM = "seguro_num";
+        public const string CARD_EXPIRATION = "seguro_data";
+        public const string SKY_CONTA_ACESSO = "idcontaacesso";
+        public const string XBOX_FIRST_LOGIN = "xbox_first_login";
+        public const string XBOX_ONE_FIRST_LOGIN = "xbox_one_first_login";
+        public const string XBOX_FUNCODE_NUMBER = "xbox_funcode_number";
+        public const string XBOX_ONE_FUNCODE_NUMBER = "xbox_funcode_number";
+        public const string LOUVA_DEUS_FACEBOOK_USER_ID = "louvadeus_facebook_user";
+        public const string LOUVA_DEUS_FACEBOOK_TOKEN = "louvadeus_facebook_token";
+
+        public const string VINDI_CUSTOMER_UPDATE_RESULT_OLD = "vindi_customer_update_result_old";
+        public const string VINDI_CUSTOMER_UPDATE_RESULT = "vindi_customer_update_result";
+        public const string VINDI_CUSTOMER_ID = "vindi_customer_id";
+        public const string VINDI_PAYMENT_METHOD = "vindi_payment_method";
+        public const string VINDI_CUSTOMER_ID_MIGRADO = "vindi_customer_id_migrado";
+
+        public const string VINDI_CUSTOMER_ID_AVULSO = "vindi_customer_id_avulso";
+
+        public const string MIX_FACEBOOK_USER_ID = "mix_facebook_user";
+        public const string MIX_FACEBOOK_TOKEN = "mix_facebook_token";
+        public const string MIX_ACTIVATION_TOKEN = "mix_activation_token";
+        public const string MIX_USER_ACTIVATED = "mix_user_activated";
+        public const string MIX_RESET_PASSWORD_TOKEN = "mix_reset_password_token";
+
+        public const string UNIVER_GOOGLE_USER_ID = "univer_google_user";
+        public const string UNIVER_FACEBOOK_USER_ID = "univer_facebook_user";
+        public const string UNIVER_FACEBOOK_TOKEN = "univer_facebook_token";
+
+        public const string PLAYPLUS_GOOGLE_USER_ID = "playplus_google_user";
+        public const string PLAYPLUS_FACEBOOK_USER_ID = "playplus_facebook_user";
+        public const string PLAYPLUS_FACEBOOK_TOKEN = "playplus_facebook_token";
+
+        public const string LOOKE_FACEBOOK_USER_ID = "looke_facebook_user";
+        public const string LOOKE_FACEBOOK_TOKEN = "looke_facebook_token";
+        public const string LOOKE_ACTIVATION_TOKEN = "looke_activation_token";
+        public const string LOOKE_USER_ACTIVATED = "looke_user_activated";
+        public const string LOOKE_RESET_PASSWORD_TOKEN = "looke_reset_password_token";
+
+        public const string LOOKE_PARTNER_TRANSACTION_SOURCE = "looke_partner_transaction_source";
+        public const string NETMOVIES_PARTNER_TRANSACTION_SOURCE = "netmovies_partner_transaction_source";
+
+        public const string NETMOVIES_FACEBOOK_USER_ID = "netmovies_facebook_user";
+        public const string NETMOVIES_FACEBOOK_TOKEN = "netmovies_facebook_token";
+
+        public const string SKY_DOMAINS_EXCEPTION = "sky_domains_ex";
+
+        public enum UserLogOperation
+        {
+            Create = 1
+        }
+
+        public static BUsers InstanceByUser(int userId)
+        {
+            PTUser pUser = new PTUser(0);
+
+            TUser tUser = pUser.Get(userId);
+
+            if (tUser == null) return null;
+
+            return BUsers.Instance(tUser.retailerID);
+        }
+
+        internal void UpdateDataKey(int userId, string currentKey, string newKey)
+        {
+            PTUserData ptUserData = new PTUserData(this.RID);
+
+            List<TUserData> tUserData = ptUserData.List(userId);
+
+            foreach (TUserData t in tUserData)
+            {
+                if (t.name == currentKey)
+                {
+                    t.name = newKey;
+
+                    ptUserData.Update(t);
+                }
+            }
+        }
+
+        internal List<int> GetUserByData(string value, string name)
+        {
+            PTUserData ptUserData = new PTUserData(this.RID);
+
+            List<TUserData> tUserDatas = ptUserData.ListByNameAndValue(value, name);
+
+            if (tUserDatas == null) return new List<int>();
+
+
+            return tUserDatas.Select(x => x.TUser.Id).ToList();
+        }
+
+        public void MergeUsers(int sourceUserId, int destinationUserId)
+        {
+            PTOrder ptOrder = new PTOrder(this.RID);
+            PTSubscription ptSubscription = new PTSubscription();
+
+            PTOrderItem ptOrderItem = new PTOrderItem(this.RID);
+
+            List<TOrder> tOrders = ptOrder.ListFlatByUserId(sourceUserId);
+
+            foreach (TOrder tOrder in tOrders)
+            {
+                //tOrder.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", destinationUserId);
+                tOrder.userId = destinationUserId;
+                ptOrder.UpdateReferenceUser(tOrder);
+            }
+
+            this.SetData(destinationUserId, "IOS-" + Guid.NewGuid(), sourceUserId.ToString());
+
+            TSubscription tCurrentSubscription = ptSubscription.GetByUserId(sourceUserId);
+
+            TSubscription tNewSubscription = ptSubscription.GetByUserId(destinationUserId);
+
+            //se houver a assinatura atual e não houver nada no novo usuário, transfere a assinatura
+            if (tCurrentSubscription != null && tNewSubscription == null)
+            {
+                tCurrentSubscription.userId = destinationUserId;
+                //tCurrentSubscription.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", destinationUserId);
+                ptSubscription.UpdateReferenceUser(tCurrentSubscription);
+            }
+            //se houver assinatura atual e houver assinatura no novo usuário, transfere os dados se a assinatura atual não estiver cancelada
+            else if (tCurrentSubscription != null && tNewSubscription != null)
+            {
+                if (tCurrentSubscription.subscriptionType != (int)Truetech.Library.Business.Purchase.BSubscription.SubscriptionType.Cancelled ||
+                    tCurrentSubscription.subscriptionType != (int)Truetech.Library.Business.Purchase.BSubscription.SubscriptionType.Blocked)
+                {
+                    tNewSubscription.cardExpirationDateMonth = tCurrentSubscription.cardExpirationDateMonth;
+                    tNewSubscription.cardExpirationDateYear = tCurrentSubscription.cardExpirationDateYear;
+                    tNewSubscription.cardHolderName = tCurrentSubscription.cardHolderName;
+                    tNewSubscription.cardNumber = tCurrentSubscription.cardNumber;
+                    tNewSubscription.cardSecurityCode = tCurrentSubscription.cardSecurityCode;
+                    tNewSubscription.nextPaymentDate = tCurrentSubscription.nextPaymentDate;
+                    tNewSubscription.paymentMethodId = tCurrentSubscription.paymentMethodId;
+                    tNewSubscription.price = tCurrentSubscription.price;
+                    tNewSubscription.status = tCurrentSubscription.status;
+                    tNewSubscription.subscriptionDate = tCurrentSubscription.subscriptionDate;
+                    tNewSubscription.subscriptionType = tCurrentSubscription.subscriptionType;
+
+                    ptSubscription.Update(tNewSubscription);
+                }
+            }
+        }
+
+        internal static int GetRIDByUserID(int userId)
+        {
+            PTUser ptUser = new PTUser(0);
+
+            return ptUser.GetRID(userId);
+        }
+
+        internal bool IsBlocked(string ip)
+        {
+            PTUserLog process = new PTUserLog();
+
+            Config config = new Config();
+
+            int usersPerDay = Int32.Parse(config.Get("USER_BLOCK_PER_DAY"));
+            int usersPerMonth = Int32.Parse(config.Get("USER_BLOCK_PER_MONTH"));
+
+            int count = process.CountCardsLastDayByIP(ip);
+
+            if (count >= usersPerDay)
+            {
+                return true;
+            }
+
+            count = process.CountCardsLastMonthByIP(ip);
+
+            if (count >= usersPerMonth)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        internal void AddLog(int userId, UserLogOperation? userLogOperation = null, string data = "")
+        {
+            PTUserLog ptUserLog = new PTUserLog();
+
+            TUserLog tUserLog = new TUserLog();
+            tUserLog.date = DateTime.Now;
+
+            if (HttpContext.Current != null && HttpContext.Current.Request != null)
+            {
+                tUserLog.ipAddress = IPHelper.GetIP();
+            }
+
+            if (string.IsNullOrWhiteSpace(tUserLog.ipAddress))
+            {
+                tUserLog.ipAddress = "104.41.34.115";
+            }
+
+            tUserLog.userId = userId;
+
+            if (userLogOperation.HasValue)
+            {
+                tUserLog.operation = (int)userLogOperation;
+                tUserLog.customData_1 = data;
+            }
+            ptUserLog.Update(tUserLog);
+        }
+
+        public static BUsers Instance(int RID)
+        {
+            //####VAREJO
+
+            if (RID == RIDS.SARAIVA) return new BUsersSaraiva();
+            if (RID == RIDS.GLOBOMARCAS) return new BUsersGlobo();
+            if (RID == RIDS.RIONEGRO) return new BUsersRioNegro();
+            if (RID == RIDS.BEC) return new BUsersBec();
+            if (RID == RIDS.EUROPA) return new BUsersEuropa();
+            if (RID == RIDS.SKY) return new BUsersSky();
+            if (RID == RIDS.LouvaDeus) return new BUsersLouvaDeus();
+            if (RID == RIDS.LOOKE_V2) return new BUsersLooke();
+            if (RID == RIDS.Mix) return new BUsersMix();
+            if (RID == RIDS.NET_MOVIES) return new BUsersNetMovies();
+            if (RID == RIDS.UNIVER) return new BUsersUniver();
+            if (RID == RIDS.SWEN) return new BUsersUniver();
+            if (RID == RIDS.PLAYPLUS) return new BUsersPlayPlus();
+            if (RID == RIDS.CINEMA_VIRTUAL) return new BUsersCinemaVirtual();
+
+            throw new ApplicationException("Invalid RID");
+        }
+
+        public void UpdateXBox(int userId, MUsersXBOXOne mUsersXbox)
+        {
+            if (userId <= 0) return;
+
+            PTUserXBOXOne process = new PTUserXBOXOne(this.RID);
+
+            TUserXBOXOne tUserXbox = process.GetByUserId(userId);
+
+            if (tUserXbox == null) tUserXbox = new TUserXBOXOne();
+
+            if (mUsersXbox.DeviceType == null) mUsersXbox.DeviceType = "";
+            if (mUsersXbox.DeviceVersion == null) mUsersXbox.DeviceVersion = "";
+            if (mUsersXbox.DeviceDebug == null) mUsersXbox.DeviceDebug = "";
+            if (mUsersXbox.DevicePdid == null) mUsersXbox.DevicePdid = "";
+            if (mUsersXbox.DeviceId == null) mUsersXbox.DeviceId = "";
+            if (mUsersXbox.TitleId == null) mUsersXbox.TitleId = "";
+            if (mUsersXbox.TitleVersion == null) mUsersXbox.TitleVersion = "";
+            if (mUsersXbox.UserHash == null) mUsersXbox.UserHash = "";
+            if (mUsersXbox.UserPwid == null) mUsersXbox.UserPwid = "";
+            if (mUsersXbox.UserGuest == null) mUsersXbox.UserGuest = "";
+            if (mUsersXbox.UserTest == null) mUsersXbox.UserTest = "";
+            if (mUsersXbox.UserFamilyid == null) mUsersXbox.UserFamilyid = "";
+            if (mUsersXbox.UserGamertag == null) mUsersXbox.UserGamertag = "";
+            if (mUsersXbox.UserAgegroup == null) mUsersXbox.UserAgegroup = "";
+            if (mUsersXbox.UserCountry == null) mUsersXbox.UserCountry = "";
+            if (mUsersXbox.Delegationtoken == null) mUsersXbox.Delegationtoken = "";
+            if (mUsersXbox.UserPrivileges == null) mUsersXbox.UserPrivileges = "";
+            if (mUsersXbox.UserPxuid == null) mUsersXbox.UserPxuid = "";
+            if (mUsersXbox.UserXuid == null) mUsersXbox.UserXuid = "";
+            if (mUsersXbox.UserLanguage == null) mUsersXbox.UserLanguage = "";
+            if (mUsersXbox.UserIsprimary == null) mUsersXbox.UserIsprimary = "";
+
+            if (mUsersXbox.DeviceType.Length > 490) mUsersXbox.DeviceType = mUsersXbox.DeviceType.Substring(0, 400);
+            if (mUsersXbox.DeviceVersion.Length > 490) mUsersXbox.DeviceVersion = mUsersXbox.DeviceVersion.Substring(0, 400);
+            if (mUsersXbox.DeviceDebug.Length > 490) mUsersXbox.DeviceDebug = mUsersXbox.DeviceDebug.Substring(0, 400);
+            if (mUsersXbox.DevicePdid.Length > 490) mUsersXbox.DevicePdid = mUsersXbox.DevicePdid.Substring(0, 400);
+            if (mUsersXbox.DeviceId.Length > 490) mUsersXbox.DeviceId = mUsersXbox.DeviceId.Substring(0, 400);
+            if (mUsersXbox.TitleId.Length > 490) mUsersXbox.TitleId = mUsersXbox.TitleId.Substring(0, 400);
+            if (mUsersXbox.TitleVersion.Length > 490) mUsersXbox.TitleVersion = mUsersXbox.TitleVersion.Substring(0, 400);
+            if (mUsersXbox.UserHash.Length > 490) mUsersXbox.UserHash = mUsersXbox.UserHash.Substring(0, 400);
+            if (mUsersXbox.UserPwid.Length > 490) mUsersXbox.UserPwid = mUsersXbox.UserPwid.Substring(0, 400);
+            if (mUsersXbox.UserGuest.Length > 490) mUsersXbox.UserGuest = mUsersXbox.UserGuest.Substring(0, 400);
+            if (mUsersXbox.UserTest.Length > 490) mUsersXbox.UserTest = mUsersXbox.UserTest.Substring(0, 400);
+            if (mUsersXbox.UserFamilyid.Length > 490) mUsersXbox.UserFamilyid = mUsersXbox.UserFamilyid.Substring(0, 400);
+            if (mUsersXbox.UserGamertag.Length > 490) mUsersXbox.UserGamertag = mUsersXbox.UserGamertag.Substring(0, 400);
+            if (mUsersXbox.UserAgegroup.Length > 490) mUsersXbox.UserAgegroup = mUsersXbox.UserAgegroup.Substring(0, 400);
+            if (mUsersXbox.UserCountry.Length > 490) mUsersXbox.UserCountry = mUsersXbox.UserCountry.Substring(0, 400);
+            if (mUsersXbox.Delegationtoken.Length > 490) mUsersXbox.Delegationtoken = mUsersXbox.Delegationtoken.Substring(0, 400);
+            if (mUsersXbox.UserPrivileges.Length > 490) mUsersXbox.UserPrivileges = mUsersXbox.UserPrivileges.Substring(0, 400);
+            if (mUsersXbox.UserPxuid.Length > 490) mUsersXbox.UserPxuid = mUsersXbox.UserPxuid.Substring(0, 400);
+            if (mUsersXbox.UserXuid.Length > 490) mUsersXbox.UserXuid = mUsersXbox.UserXuid.Substring(0, 400);
+            if (mUsersXbox.UserLanguage.Length > 490) mUsersXbox.UserLanguage = mUsersXbox.UserLanguage.Substring(0, 400);
+            if (mUsersXbox.UserIsprimary.Length > 490) mUsersXbox.UserIsprimary = mUsersXbox.UserIsprimary.Substring(0, 400);
+
+            tUserXbox.userId = userId;
+            //if (tUserXbox.TUserReference == null)
+            //{
+            //    tUserXbox.TUserReference = new EntityReference<TUser>();
+            //    tUserXbox.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+            //}
+            //else
+            //{
+            //    tUserXbox.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+            //}
+
+            tUserXbox.deviceType = mUsersXbox.DeviceType;
+            tUserXbox.deviceVersion = mUsersXbox.DeviceVersion;
+            tUserXbox.deviceDebug = mUsersXbox.DeviceDebug;
+            tUserXbox.devicePdid = mUsersXbox.DevicePdid;
+            tUserXbox.deviceId = mUsersXbox.DeviceId;
+            tUserXbox.titleId = mUsersXbox.TitleId;
+            tUserXbox.titleVersion = mUsersXbox.TitleVersion;
+            tUserXbox.userHash = mUsersXbox.UserHash;
+            tUserXbox.userPwid = mUsersXbox.UserPwid;
+            tUserXbox.userGuest = mUsersXbox.UserGuest;
+            tUserXbox.userTest = mUsersXbox.UserTest;
+            tUserXbox.userFamilyid = mUsersXbox.UserFamilyid;
+            tUserXbox.userGamertag = mUsersXbox.UserGamertag;
+            tUserXbox.userAgegroup = mUsersXbox.UserAgegroup;
+            tUserXbox.userCountry = mUsersXbox.UserCountry;
+            tUserXbox.delegationtoken = mUsersXbox.Delegationtoken;
+            tUserXbox.userPrivileges = mUsersXbox.UserPrivileges;
+            tUserXbox.userPxuid = mUsersXbox.UserPxuid;
+            tUserXbox.userXuid = mUsersXbox.UserXuid;
+            tUserXbox.userLanguage = mUsersXbox.UserLanguage;
+            tUserXbox.userIsprimary = mUsersXbox.UserIsprimary;
+
+            try
+            {
+                process.Update(tUserXbox);
+            }
+            catch (Exception ex)
+            {
+                BLog bLog = new BLog();
+                bLog.Add("XBOXUSER", ex.Message, ex.StackTrace);
+            }
+        }
+
+
+        public void UpdateXBox(int userId, MUserXBOX mUserXbox)
+        {
+            if (userId <= 0) return;
+
+            PTUserXBOX process = new PTUserXBOX(this.RID);
+
+            TUserXBOX tUserXbox = process.GetByUserId(userId);
+
+            if (tUserXbox == null) tUserXbox = new TUserXBOX();
+
+            if (mUserXbox.AgeGroup == null) mUserXbox.AgeGroup = "";
+            if (mUserXbox.ClientIpPort == null) mUserXbox.ClientIpPort = "";
+            if (mUserXbox.Country == null) mUserXbox.Country = "";
+            if (mUserXbox.DelegationToken == null) mUserXbox.DelegationToken = "";
+            if (mUserXbox.DeviceId == null) mUserXbox.DeviceId = "";
+            if (mUserXbox.DeviceName == null) mUserXbox.DeviceName = "";
+            if (mUserXbox.DeviceType == null) mUserXbox.DeviceType = "";
+            if (mUserXbox.FlowToken == null) mUserXbox.FlowToken = "";
+            if (mUserXbox.Gamertag == null) mUserXbox.Gamertag = "";
+            if (mUserXbox.Language == null) mUserXbox.Language = "";
+            if (mUserXbox.ParentXuid == null) mUserXbox.ParentXuid = "";
+            if (mUserXbox.PartnerDeviceId == null) mUserXbox.PartnerDeviceId = "";
+            if (mUserXbox.PartnerParentXuid == null) mUserXbox.PartnerParentXuid = "";
+            if (mUserXbox.PartnerXuid == null) mUserXbox.PartnerXuid = "";
+            if (mUserXbox.Privilege == null) mUserXbox.Privilege = "";
+            if (mUserXbox.Puid == null) mUserXbox.Puid = "";
+            if (mUserXbox.Status == null) mUserXbox.Status = "";
+            if (mUserXbox.Tier == null) mUserXbox.Tier = "";
+            if (mUserXbox.TitleId == null) mUserXbox.TitleId = "";
+            if (mUserXbox.TitleVersion == null) mUserXbox.TitleVersion = "";
+            if (mUserXbox.Xuid == null) mUserXbox.Xuid = "";
+
+            if (mUserXbox.AgeGroup.Length > 490) mUserXbox.AgeGroup = mUserXbox.AgeGroup.Substring(0, 400);
+            if (mUserXbox.ClientIpPort.Length > 490) mUserXbox.ClientIpPort = mUserXbox.ClientIpPort.Substring(0, 400);
+            if (mUserXbox.Country.Length > 490) mUserXbox.Country = mUserXbox.Country.Substring(0, 400);
+            if (mUserXbox.DelegationToken.Length > 490) mUserXbox.DelegationToken = mUserXbox.DelegationToken.Substring(0, 400);
+            if (mUserXbox.DeviceId.Length > 490) mUserXbox.DeviceId = mUserXbox.DeviceId.Substring(0, 400);
+            if (mUserXbox.DeviceName.Length > 490) mUserXbox.DeviceName = mUserXbox.DeviceName.Substring(0, 400);
+            if (mUserXbox.DeviceType.Length > 490) mUserXbox.DeviceType = mUserXbox.DeviceType.Substring(0, 400);
+            if (mUserXbox.FlowToken.Length > 490) mUserXbox.FlowToken = mUserXbox.FlowToken.Substring(0, 400);
+            if (mUserXbox.Gamertag.Length > 490) mUserXbox.Gamertag = mUserXbox.Gamertag.Substring(0, 400);
+            if (mUserXbox.Language.Length > 490) mUserXbox.Language = mUserXbox.Language.Substring(0, 400);
+            if (mUserXbox.ParentXuid.Length > 490) mUserXbox.ParentXuid = mUserXbox.ParentXuid.Substring(0, 400);
+            if (mUserXbox.PartnerDeviceId.Length > 490) mUserXbox.PartnerDeviceId = mUserXbox.PartnerDeviceId.Substring(0, 400);
+            if (mUserXbox.PartnerParentXuid.Length > 490) mUserXbox.PartnerParentXuid = mUserXbox.PartnerParentXuid.Substring(0, 400);
+            if (mUserXbox.PartnerXuid.Length > 490) mUserXbox.PartnerXuid = mUserXbox.PartnerXuid.Substring(0, 400);
+            if (mUserXbox.Privilege.Length > 490) mUserXbox.Privilege = mUserXbox.Privilege.Substring(0, 400);
+            if (mUserXbox.Puid.Length > 490) mUserXbox.Puid = mUserXbox.Puid.Substring(0, 400);
+            if (mUserXbox.Status.Length > 490) mUserXbox.Status = mUserXbox.Status.Substring(0, 400);
+            if (mUserXbox.Tier.Length > 490) mUserXbox.Tier = mUserXbox.Tier.Substring(0, 400);
+            if (mUserXbox.TitleId.Length > 490) mUserXbox.TitleId = mUserXbox.TitleId.Substring(0, 400);
+            if (mUserXbox.TitleVersion.Length > 490) mUserXbox.TitleVersion = mUserXbox.TitleVersion.Substring(0, 400);
+            if (mUserXbox.Xuid.Length > 490) mUserXbox.Xuid = mUserXbox.Xuid.Substring(0, 400);
+
+            tUserXbox.userId = userId;
+            //if (tUserXbox.TUserReference == null)
+            //{
+            //    tUserXbox.TUserReference = new EntityReference<TUser>();
+            //    tUserXbox.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+            //}
+            //else
+            //{
+            //    tUserXbox.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+            //}
+
+            tUserXbox.AgeGroup = mUserXbox.AgeGroup;
+            tUserXbox.ClientIpPort = mUserXbox.ClientIpPort;
+            tUserXbox.Country = mUserXbox.Country;
+            tUserXbox.DelegationToken = mUserXbox.DelegationToken;
+            tUserXbox.DeviceId = mUserXbox.DeviceId;
+            tUserXbox.DeviceName = mUserXbox.DeviceName;
+            tUserXbox.DeviceType = mUserXbox.DeviceType;
+            tUserXbox.FlowToken = mUserXbox.FlowToken;
+            tUserXbox.Gamertag = mUserXbox.Gamertag;
+            tUserXbox.Language = mUserXbox.Language;
+            tUserXbox.ParentXuid = mUserXbox.ParentXuid;
+            tUserXbox.PartnerDeviceId = mUserXbox.PartnerDeviceId;
+            tUserXbox.PartnerParentXuid = mUserXbox.PartnerParentXuid;
+            tUserXbox.PartnerXuid = mUserXbox.PartnerXuid;
+            tUserXbox.Privilege = mUserXbox.Privilege;
+            tUserXbox.Puid = mUserXbox.Puid;
+            tUserXbox.Status = mUserXbox.Status;
+            tUserXbox.Tier = mUserXbox.Tier;
+            tUserXbox.TitleId = mUserXbox.TitleId;
+            tUserXbox.TitleVersion = mUserXbox.TitleVersion;
+            tUserXbox.Xuid = mUserXbox.Xuid;
+
+            try
+            {
+                process.Update(tUserXbox);
+            }
+            catch (Exception ex)
+            {
+                BLog bLog = new BLog();
+                bLog.Add("XBOXUSER", ex.Message, ex.StackTrace);
+            }
+        }
+
+        protected abstract bool OnIsDuplicatedUser(MUsers mUser, out string message);
+
+        public abstract UserCheckFailure OnUserCheck(MUsers mUser, out string message);
+
+        protected abstract void OnAfterAddUser(MUsers mUser, out string message);
+
+        protected abstract UserCheckFailure OnAddUser(MUsers mUser, out string message);
+
+        public abstract void OnAfterSucessfullyLoginUpdate(MLoginResult result, NameValueCollection aditionalData);
+
+        public abstract void OnSucessfullyLogin(MLoginResult result, NameValueCollection aditionalData);
+
+        public MAddUsersResult UpdateUser(MUsers mUser)
+        {
+            return this.AddUser(mUser, true, false);
+        }
+
+        public MAddUsersResult AddUser(MUsers mUser, bool checkIpBlock)
+        {
+            return this.AddUser(mUser, false, checkIpBlock);
+        }
+
+        public MAddUsersResult AddUser(MUsers mUser)
+        {
+            return this.AddUser(mUser, false, true);
+        }
+
+        public MAddUsersResult AddUser(MUsers mUser, bool updateIfExists, bool checkIpBlock)
+        {
+            UserCheckFailure check;
+            string message;
+            MAddUsersResult result = new MAddUsersResult();
+
+            check = CheckUser(mUser, checkIpBlock);
+
+            if (check != UserCheckFailure.None) { result.Result = -1; result.UserCheckFailure = check; return result; }
+
+            if (updateIfExists == false)
+            {
+                check = OnUserCheck(mUser, out message);
+
+                if (check != UserCheckFailure.None) { result.Result = -1; result.Message = message; result.UserCheckFailure = check; return result; }
+
+                if (OnIsDuplicatedUser(mUser, out message)) { result.Result = -2; result.Message = message; result.UserCheckFailure = UserCheckFailure.Duplicated; return result; }
+            }
+
+            //insiro o usuário no cliente
+            UserCheckFailure retailerResult = OnAddUser(mUser, out message);
+            if (retailerResult == UserCheckFailure.None)
+            {
+                //se sucesso insiro o usuario local ou atualizo
+                PTUser pTUser = new PTUser(RID);
+
+                TUser tUser = GetUserToUpdate(mUser.UserId);
+
+                bool update = false;
+
+                if (tUser.Id == 0)
+                {
+                    tUser.date = DateTime.Now;
+                }
+                else
+                {
+                    update = true;
+                    //if(tUser.document != null && tUser.document!= "") mUser.Document = tUser.document;
+                }
+
+                FillDataObject(mUser, tUser);
+
+                pTUser.Update(tUser);
+                mUser.UserId = tUser.Id;
+
+
+                //Integration PlayPlus
+                if (RID == (int)RIDS.PLAYPLUS)
+                {
+                    PlayPlus.BSyncronizationPlayPlus bSyncronizationPlayPlus = new PlayPlus.BSyncronizationPlayPlus(RID);
+                    bSyncronizationPlayPlus.AddUserIntegrationPlayPlus(tUser.Id, (int)PlayPlus.BSyncronizationPlayPlus.ErpIds.SAP);
+                    bSyncronizationPlayPlus.AddUserIntegrationPlayPlus(tUser.Id, (int)PlayPlus.BSyncronizationPlayPlus.ErpIds.SALESFORCE);
+                }
+
+                List<TUserAddress> ltUserAddress = new List<TUserAddress>();
+
+                FillDataObjectAdress(mUser, ltUserAddress);
+
+                if (mUser != null)
+                {
+                    var profiles = AddIfNecessaryAndReturnProfiles(mUser);
+                    result.Profiles = profiles;
+                }
+
+                pTUser.UpdateAddress(ltUserAddress);
+
+                List<TUserPhone> ltUserPhone = new List<TUserPhone>();
+                FillDataObjectPhone(mUser, ltUserPhone);
+                pTUser.UpdatePhone(ltUserPhone);
+
+                if (update == false)
+                {
+                    OnAfterAddUser(mUser, out message);
+                }
+
+                result.UserId = mUser.UserId;
+                result.Message = "";
+                result.Result = 0;
+                result.UserCheckFailure = UserCheckFailure.None;
+                return result;
+            }
+            else
+            {
+                result.Message = message;
+                result.Result = -1;
+                result.UserCheckFailure = retailerResult;
+                return result;
+            }
+        }
+
+
+        private TUser GetUserToUpdate(int userId)
+        {
+            PTUser pTUser = new PTUser(RID);
+
+            TUser tUser = pTUser.Get(userId);
+
+            if (tUser == null) return new TUser();
+
+            else return tUser;
+        }
+
+        private TUser GetUserSaraivaToUpdate(string userName)
+        {
+            PTUser pTUser = new PTUser(RIDS.SARAIVA);
+
+            TUser tUser = pTUser.GetSaraiva(userName);
+
+            if (tUser == null) return new TUser();
+
+            else return tUser;
+        }
+
+
+        private TUser GetUserToUpdate(MUsers mUser)
+        {
+            PTUser pTUser = new PTUser(RID);
+
+            TUser tUser = pTUser.GetByUserName(mUser.UserName);
+
+            if (tUser == null) return new TUser();
+
+            else return tUser;
+        }
+
+        public UserCheckFailure CheckUser(MUsers mUser, bool checkIpBlock = true)
+        {
+            //valores padrões
+            if (mUser.Document == null) mUser.Document = "";
+            if (mUser.Email == null) mUser.Email = "";
+            if (mUser.FirstName == null) mUser.FirstName = "";
+            if (mUser.LastName == null) mUser.LastName = "";
+            if (mUser.HowYouMetUs == null) mUser.HowYouMetUs = "";
+
+            if (mUser.BroadBand == null) mUser.BroadBand = "";
+
+            if (string.IsNullOrEmpty(mUser.Gender)) mUser.Gender = "U";
+            if (string.IsNullOrEmpty(mUser.MaritalStatus)) mUser.MaritalStatus = "U";
+            if (string.IsNullOrEmpty(mUser.PersonType)) mUser.PersonType = "U";
+            if (mUser.Password == null) mUser.Password = "";
+            if (mUser.RetailerUserId == null) mUser.RetailerUserId = "";
+            if (mUser.UserName == null) mUser.UserName = "";
+            if (mUser.CountryCode == 0) mUser.CountryCode = 76;
+
+
+            mUser.BroadBand = mUser.BroadBand.Trim();
+            mUser.Document = mUser.Document.Trim();
+            mUser.Email = mUser.Email.Trim();
+            mUser.FirstName = mUser.FirstName.Trim();
+            mUser.Gender = mUser.Gender.Trim();
+            mUser.LastName = mUser.LastName.Trim();
+            mUser.HowYouMetUs = mUser.HowYouMetUs.Trim();
+            mUser.MaritalStatus = mUser.MaritalStatus.Trim();
+            mUser.Password = mUser.Password.Trim();
+            mUser.PersonType = mUser.PersonType.Trim();
+            mUser.RetailerUserId = mUser.RetailerUserId.Trim();
+            mUser.UserName = mUser.UserName.Trim();
+
+
+            mUser.Gender = mUser.Gender.ToUpper();
+            mUser.MaritalStatus = mUser.MaritalStatus.ToUpper();
+            mUser.PersonType = mUser.PersonType.ToUpper();
+
+            //verifica tamanhos
+            //Document == "" deve ser aceito pois o cadastro no IOS não tem documento
+            if ((mUser.Document.Length < 11 && mUser.Document != "") && mUser.CountryCode == 76) return UserCheckFailure.InvalidDocument;
+            if (mUser.LastName.Length > 50) return UserCheckFailure.InvalidLastName;
+            if (mUser.Gender.Length > 1) return UserCheckFailure.InvalidGender;
+            if (mUser.MaritalStatus.Length > 1) return UserCheckFailure.InvalidMaritalStatus;
+            if (mUser.PersonType.Length > 1) return UserCheckFailure.InvalidPersonType;
+            if (mUser.RetailerUserId.Length > 40) return UserCheckFailure.InvalidRetailerUserId;
+
+            if (mUser.Gender != "M" && mUser.Gender != "F" && mUser.Gender != "U") return UserCheckFailure.InvalidGender;
+
+            if (mUser.BroadBand.Length > 100) return UserCheckFailure.InvalidBroadBand;
+
+            //verifica username
+            if (mUser.UserName.Trim() == "" ||
+                mUser.UserName.Length > 100) return UserCheckFailure.InvalidUserName;
+
+            //verifica email
+            if (mUser.Email.Trim() == "" ||
+                mUser.Email.Length > 100) return UserCheckFailure.InvalidEmail;
+
+            //verifica name
+            if (mUser.FirstName.Trim() == "" ||
+                mUser.FirstName.Length > 50) return UserCheckFailure.InvalidFirstName;
+
+            //verifica email @
+            if (!isValidEmail(mUser.Email)) return UserCheckFailure.InvalidEmail;
+
+            if (RID == RIDS.UNIVER)
+            {
+                BEmailCheck bEmailCheck = new BEmailCheck();
+
+                if (!bEmailCheck.Check(mUser.Email.Trim())) return UserCheckFailure.InvalidEmail;
+            }
+
+            mUser.RetailerID = RID;
+
+            if (mUser.Birthday < new DateTime(1900, 1, 1) ||
+                mUser.Birthday > DateTime.Now) return UserCheckFailure.InvalidBirthday;
+
+            //valido os dados adicionais
+            if (mUser.Address != null)
+            {
+                foreach (MUsersAddress mAddress in mUser.Address)
+                {
+                    if (mAddress.AdressType == null) mAddress.AdressType = "";
+                    if (mAddress.StreetType == null) mAddress.StreetType = "";
+                    if (mAddress.Street == null) mAddress.Street = "";
+                    if (mAddress.Street2 == null) mAddress.Street2 = "";
+                    if (mAddress.Street3 == null) mAddress.Street3 = "";
+                    if (mAddress.Street4 == null) mAddress.Street4 = "";
+                    if (mAddress.State == null) mAddress.State = "";
+                    if (mAddress.Zip == null) mAddress.Zip = "";
+                    if (mAddress.City == null) mAddress.City = "";
+
+                    mAddress.AdressType = mAddress.AdressType.Trim();
+                    mAddress.City = mAddress.City.Trim();
+                    mAddress.State = mAddress.State.Trim();
+                    mAddress.Street = mAddress.Street.Trim();
+                    mAddress.Street2 = mAddress.Street2.Trim();
+                    mAddress.Street3 = mAddress.Street3.Trim();
+                    mAddress.Street4 = mAddress.Street4.Trim();
+                    mAddress.StreetType = mAddress.StreetType.Trim();
+                    mAddress.Zip = mAddress.Zip.Trim();
+
+                    if (mAddress.AdressType != "H" && mAddress.AdressType != "B" && mAddress.AdressType != "F" && mAddress.AdressType != "N" && mAddress.AdressType != "T") return UserCheckFailure.InvalidAddressType;
+
+                    if (mAddress.AdressType == "H")
+                    {
+                        if (mAddress.StreetType.Length > 10 || mAddress.StreetType.Length == 0) return UserCheckFailure.InvalidHomeStreetType;
+                        if (mAddress.Street.Length > 100 || mAddress.Street.Length == 0) return UserCheckFailure.InvalidHomeStreet;
+                        if (mAddress.Street2.Length > 70 || mAddress.Street2.Length == 0) return UserCheckFailure.InvalidHomeStreet2;
+                        if (mAddress.Street3.Length > 70) return UserCheckFailure.InvalidHomeStreet3;
+                        if (mAddress.Street4.Length > 70) return UserCheckFailure.InvalidHomeStreet4;
+                        if (mAddress.State.Length > 50 || mAddress.State.Length == 0) return UserCheckFailure.InvalidHomeState;
+                        if (mAddress.Zip.Length > 20 || mAddress.Zip.Length == 0) return UserCheckFailure.InvalidHomeZip;
+                        if (mAddress.City.Length > 50 || mAddress.City.Length == 0) return UserCheckFailure.InvalidHomeCity;
+                        if (mAddress.Country == 0) return UserCheckFailure.InvalidHomeCountry;
+                    }
+                    else if (mAddress.AdressType == "B")
+                    {
+                        if (mAddress.StreetType.Length > 10 || mAddress.StreetType.Length == 0) return UserCheckFailure.InvalidBusinessStreetType;
+                        if (mAddress.Street.Length > 70 || mAddress.Street.Length == 0) return UserCheckFailure.InvalidBusinessStreet;
+                        //if (mAddress.Street2.Length > 70 || mAddress.Street2.Length == 0) return UserCheckFailure.InvalidBusinessStreet2;
+                        if (mAddress.Street3.Length > 70) return UserCheckFailure.InvalidBusinessStreet3;
+                        if (mAddress.Street4.Length > 70) return UserCheckFailure.InvalidBusinessStreet4;
+                        if (mAddress.State.Length > 50 || mAddress.State.Length == 0) return UserCheckFailure.InvalidBusinessState;
+                        if (mAddress.Zip.Length > 20 || mAddress.Zip.Length == 0) return UserCheckFailure.InvalidBusinessZip;
+                        if (mAddress.City.Length > 50 || mAddress.City.Length == 0) return UserCheckFailure.InvalidBusinessCity;
+                        if (mAddress.Country == 0) return UserCheckFailure.InvalidBusinessCountry;
+                    }
+                    else if (mAddress.AdressType == "F")
+                    {
+                        if (mAddress.StreetType.Length > 10 || mAddress.StreetType.Length == 0) return UserCheckFailure.InvalidBusinessStreetType;
+                        if (mAddress.Street.Length > 100 || mAddress.Street.Length == 0) return UserCheckFailure.InvalidBusinessStreet;
+                        if (mAddress.Street2.Length > 50 || mAddress.Street2.Length == 0) return UserCheckFailure.InvalidBusinessStreet2;
+                        if (mAddress.Street3.Length > 70) return UserCheckFailure.InvalidBusinessStreet3;
+                        if (mAddress.Street4.Length > 70) return UserCheckFailure.InvalidBusinessStreet4;
+                        if (mAddress.State.Length > 50 || mAddress.State.Length == 0) return UserCheckFailure.InvalidBusinessState;
+                        if (mAddress.Zip.Length > 10 || mAddress.Zip.Length == 0) return UserCheckFailure.InvalidBusinessZip;
+                        if (mAddress.City.Length > 50 || mAddress.City.Length == 0) return UserCheckFailure.InvalidBusinessCity;
+                        if (mAddress.Country == 0) return UserCheckFailure.InvalidBusinessCountry;
+                    }
+                    else if (mAddress.AdressType == "T")
+                    {
+
+                    }
+                }
+            }
+
+            //valido os telefones
+            List<MUsersPhone> phonesToRemove = new List<MUsersPhone>();
+            foreach (MUsersPhone mPhone in mUser.Phones)
+            {
+                if (mPhone.Branch == null) mPhone.Branch = "";
+                if (mPhone.Number == null) mPhone.Number = "";
+
+                mPhone.Branch = mPhone.Branch.Trim();
+                mPhone.Number = mPhone.Number.Trim();
+                mPhone.PhoneType = mPhone.PhoneType.Trim();
+
+                if (mPhone.PhoneType != "H" && mPhone.PhoneType != "B" && mPhone.PhoneType != "C" && mPhone.PhoneType != "O" && mPhone.PhoneType != "T" && mPhone.PhoneType != "N" && mPhone.PhoneType != "L" && mPhone.PhoneType != "X" && mPhone.PhoneType != "S" && mPhone.PhoneType != "V") return UserCheckFailure.InvalidPhoneType;
+
+                if (HasPhone(mPhone))
+                {
+                    if (mPhone.PhoneType == "H")
+                    {
+                        if (RID != RIDS.PLAYPLUS)
+                        {
+                            if (mPhone.AreaCode == 0) return UserCheckFailure.InvalidHomePhoneAreaCode;
+                            if (mPhone.CountryCode == 0) return UserCheckFailure.InvalidHomePhoneContryCode;
+                            if (mPhone.Number.Length > 20 || mPhone.Number.Length == 0) return UserCheckFailure.InvalidHomePhoneNumber;
+                        }
+                        else
+                        {
+                            if (mPhone.AreaCode == 0 && !(mPhone.Number.Contains("(") || mPhone.Number.Contains("-"))) return UserCheckFailure.InvalidHomePhoneAreaCode;
+                            if (mPhone.CountryCode == 0 && !(mPhone.Number.Contains("(") || mPhone.Number.Contains("-"))) return UserCheckFailure.InvalidHomePhoneContryCode;
+                            if (mPhone.Number.Length > 20 || mPhone.Number.Length == 0 && !(mPhone.Number.Contains("(") || mPhone.Number.Contains("-"))) return UserCheckFailure.InvalidHomePhoneNumber;
+                        }
+
+                    }
+                    else if (mPhone.PhoneType == "B")
+                    {
+                        if (mPhone.AreaCode == 0) return UserCheckFailure.InvalidBusinessPhoneAreaCode;
+                        if (mPhone.CountryCode == 0) return UserCheckFailure.InvalidBusinessPhoneContryCode;
+                        if (mPhone.Number.Length > 20 || mPhone.Number.Length == 0) return UserCheckFailure.InvalidBusinessPhoneNumber;
+                    }
+                    else if (mPhone.PhoneType == "C")
+                    {
+                        if (RID != RIDS.PLAYPLUS)
+                        {
+                            if (mPhone.AreaCode == 0) return UserCheckFailure.InvalidCellPhoneAreaCode;
+                            if (mPhone.CountryCode == 0) return UserCheckFailure.InvalidCellPhoneContryCode;
+                            if (mPhone.Number.Length > 20 || mPhone.Number.Length == 0) return UserCheckFailure.InvalidCellPhoneNumber;
+                        }
+                        else
+                        {
+                            //No caso da playplus, os dados foram importados e eles não estavam muito bons, portanto foi necessário fazer um pesqueno desvio na validação 
+                            //Para que nas primeira vezes pudessemos ajustar os valores 
+                            if (mPhone.AreaCode == 0 && !(mPhone.Number.Contains("(") || mPhone.Number.Contains("-"))) return UserCheckFailure.InvalidCellPhoneAreaCode;
+                            if (mPhone.CountryCode == 0 && !(mPhone.Number.Contains("(") || mPhone.Number.Contains("-"))) return UserCheckFailure.InvalidCellPhoneContryCode;
+                            if (mPhone.Number.Length > 20 || mPhone.Number.Length == 0) return UserCheckFailure.InvalidCellPhoneNumber;
+                        }
+                    }
+                }
+                else
+                {
+                    phonesToRemove.Add(mPhone);
+                }
+
+            }
+
+            foreach (MUsersPhone mPhone in phonesToRemove)
+            {
+                mUser.Phones.Remove(mPhone);
+            }
+
+            //verifica password
+            if (mUser.Password.Trim() == "") return UserCheckFailure.InvalidPassword;
+
+            string ip = "";
+
+            if (HttpContext.Current != null && HttpContext.Current.Request != null)
+                ip = IPHelper.GetIP();
+
+            if (string.IsNullOrWhiteSpace(ip))
+                ip = "104.41.34.115";
+
+            if (checkIpBlock == true)
+            {
+                if (IsBlocked(ip))
+                {
+                    return UserCheckFailure.Blocked;
+                }
+            }
+
+
+            return UserCheckFailure.None;
+        }
+
+
+
+        private bool HasPhone(MUsersPhone mPhone)
+        {
+            return mPhone.AreaCode != 0 || mPhone.Number != "";
+        }
+
+
+        public abstract void OnGet(MUsers mUser);
+
+        public MUsers GetByUserName(string userName)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByUserName(userName);
+
+            if (tUser == null)
+            {
+                return null;
+            }
+            else
+            {
+                return this.Get(tUser.Id);
+            }
+        }
+
+        public MUserResetPassword GetBySecurityKey(Guid securityKey)
+        {
+            PTUserResetPassword pUserResetPassword = new PTUserResetPassword(RID);
+
+            TUserResetPassword tUserResetPassword = pUserResetPassword.GetBySecurityKey(securityKey);
+
+            if (tUserResetPassword == null)
+                return null;
+
+            return FillUserResetPassword(tUserResetPassword);
+        }
+
+        public string RegisterRecoverPasswordSecurityKey(string EmailCPF)
+        {
+            string RecoveryPasswordToken = "";
+
+            PTUserResetPassword pUserResetPassword = new PTUserResetPassword(RID);
+
+            TUserResetPassword tUserResetPassword = new TUserResetPassword();
+
+            if (EmailCPF.Contains("@"))
+                tUserResetPassword.username = EmailCPF;
+            else
+                tUserResetPassword.cpf = EmailCPF;
+
+            tUserResetPassword.securityKey = Guid.NewGuid();
+            tUserResetPassword.dueDate = DateTime.Now.AddDays(5);
+
+            pUserResetPassword.Update(tUserResetPassword);
+
+            RecoveryPasswordToken = tUserResetPassword.securityKey + tUserResetPassword.dueDate.ToString("yyyyMMddHHmm");
+            byte[] cripToken = System.Text.Encoding.UTF8.GetBytes(RecoveryPasswordToken);
+            RecoveryPasswordToken = Convert.ToBase64String(cripToken);
+
+
+            return RecoveryPasswordToken;
+        }
+
+        public List<MUsers> ListAll()
+        {
+            PTUser ptUser = new PTUser(RID);
+
+            List<TUser> tUsers = ptUser.List();
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser tUser in tUsers)
+            {
+                MUsers mUser = FillUserForList(tUser);
+
+                result.Add(mUser);
+            }
+
+            return result;
+        }
+
+        public string GetUserName(int userId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.Get(userId);
+
+            if (tUser == null)
+                return null;
+
+            return tUser.username;
+        }
+
+
+        public MUsers Get(int userId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.Get(userId);
+
+            MUsers mUser = new MUsers();
+
+            if (tUser != null)
+            {
+                mUser = FillUser(tUser);
+            }
+            mUser.UserId = userId;
+
+            BSubscription bSubscription = BSubscription.Instance(RID);
+            mUser.PlanId = bSubscription.GetSubscriptionPlan(userId);
+            mUser.SubPlanId = bSubscription.GetSubscriptionSubPlan(userId);
+
+            this.OnGet(mUser);
+
+            if (mUser != null)
+            {
+                var profiles = AddIfNecessaryAndReturnProfiles(mUser);
+                mUser.Profiles = profiles;
+            }
+
+            return mUser;
+        }
+
+        public MUsers GetWithTuser(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+
+            mUser = FillUser(tUser);
+            mUser.UserId = tUser.Id;
+
+            BSubscription bSubscription = BSubscription.Instance(RID);
+            mUser.PlanId = bSubscription.GetSubscriptionPlan(mUser.UserId);
+            mUser.SubPlanId = bSubscription.GetSubscriptionSubPlan(mUser.UserId);
+
+            this.OnGet(mUser);
+
+            if (mUser != null)
+            {
+                var profiles = AddIfNecessaryAndReturnProfiles(mUser);
+                mUser.Profiles = profiles;
+            }
+
+            return mUser;
+        }
+
+        public MUsers GetEssentials(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+
+            mUser = FillUsersLight(tUser);
+            mUser.UserId = tUser.Id;
+
+            //BSubscription bSubscription = BSubscription.Instance(RID);
+            //bSubscription.GetSubscriptionPlanAndSubPlanId(mUser);
+
+            this.OnGet(mUser);
+
+            if (mUser != null)
+            {
+                var profiles = AddIfNecessaryAndReturnProfiles(mUser);
+                mUser.Profiles = profiles;
+            }
+
+            return mUser;
+        }
+
+        public int GetSourceId(int userId)
+        {
+            PTUser pUser = new PTUser(RID);
+            return pUser.GetSourceId(userId);
+        }
+
+        public MUsers GetUser(int userId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.Get(userId);
+
+            MUsers mUser = new MUsers();
+
+            if (tUser != null)
+            {
+                mUser = FillUser(tUser);
+            }
+            mUser.UserId = userId;
+
+
+            this.OnGet(mUser);
+
+            return mUser;
+        }
+
+        public String GetFirstName(int userId)
+        {
+            string r = "";
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.Get(userId);
+
+            MUsers mUser = new MUsers();
+
+            if (tUser != null)
+            {
+                r = tUser.firstName;
+            }
+
+
+            return r;
+        }
+
+        #region login
+
+        protected virtual bool ResendUserPassword(string userName)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected abstract MUsers OnLoginEssentials(string userName, string password, out bool localLogin, out string message, out string sessionId, out NameValueCollection aditionalData, int? sourceID = null);
+
+
+        protected abstract MUsers OnLogin(string userName, string password, out bool localLogin, out string message, out string sessionId, out NameValueCollection aditionalData, int? sourceID = null);
+
+        public void UnLinkXBOX360(int userId)
+        {
+            PTUser ptUser = new PTUser(RID);
+
+            TUser tUser = ptUser.Get(userId);
+
+            if (tUser != null)
+            {
+                tUser.xboxId = null;
+
+                //update
+                ptUser.Update(tUser);
+            }
+        }
+
+        public MLoginResult UnLinkXBOXOne(string xBoxId)
+        {
+            PTUser ptUser = new PTUser(RID);
+
+            TUser tUser = ptUser.GetByXboxOneID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult result = new MLoginResult();
+
+                MUsers mUsers;
+
+                ptUser.UpdateAllXboxOneID(xBoxId);
+
+                mUsers = FillUser(tUser);
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = "";
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+        public void UnLinkXBOXOne(int userId)
+        {
+            PTUser ptUser = new PTUser(RID);
+
+            TUser tUser = ptUser.Get(userId);
+
+            if (tUser != null)
+            {
+                tUser.xboxOneId = null;
+
+                //update
+                ptUser.Update(tUser);
+            }
+        }
+
+
+        public MUsers LinkXBOX360ByUserId(int userId, string xBoxId)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.Get(userId);
+
+            if (tUser != null)
+            {
+                //clear all xbox id
+                ptUser.UpdateAllXbox360ID(xBoxId);
+
+                //set xbox id
+                tUser.xboxId = xBoxId;
+
+                //update
+                ptUser.Update(tUser);
+
+                //set first login date
+                SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                MUsers mUsers = this.Get(userId);
+
+                return mUsers;
+            }
+
+            return null;
+        }
+
+
+        public MLoginResult UnLinkXBOX360(string xBoxId)
+        {
+            PTUser ptUser = new PTUser(RID);
+
+            TUser tUser = ptUser.GetByXbox360ID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult result = new MLoginResult();
+
+                MUsers mUsers;
+
+                ptUser.UpdateAllXbox360ID(xBoxId);
+
+                mUsers = FillUser(tUser);
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = "";
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+        public MLoginResult LinkXBOX360(string userName, string password, string xBoxId)
+        {
+            MLoginResult mLoginResult = this.Login(userName, password);
+
+            if (mLoginResult.Result == 0)
+            {
+                PTUser ptUser = new PTUser(this.RID);
+
+                ptUser.UpdateAllXbox360ID(xBoxId);
+
+                TUser tUser = ptUser.Get(mLoginResult.User.UserId);
+
+                tUser.xboxId = xBoxId;
+
+                ptUser.Update(tUser);
+
+                SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+            }
+
+            return mLoginResult;
+        }
+
+
+        public MLoginResult LinkXBOXOne(string userName, string password, string xBoxId)
+        {
+            MLoginResult mLoginResult = this.Login(userName, password);
+
+            if (mLoginResult.Result == 0)
+            {
+                PTUser ptUser = new PTUser(this.RID);
+
+                ptUser.UpdateAllXboxOneID(xBoxId);
+
+                TUser tUser = ptUser.Get(mLoginResult.User.UserId);
+
+                tUser.xboxOneId = xBoxId;
+
+                ptUser.Update(tUser);
+
+                SetDataIfEmpty(tUser.Id, XBOX_ONE_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                BSubscription bSubscription = BSubscription.Instance(RID);
+                mLoginResult.User.PlanId = bSubscription.GetSubscriptionPlan(tUser.Id);
+            }
+
+            return mLoginResult;
+
+        }
+        public MUsers GetByXBOX360Id(string xBoxId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByXbox360ID(xBoxId);
+
+            if (tUser != null)
+            {
+                MUsers mUsers = this.Get(tUser.Id);
+
+                return mUsers;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public MLoginResult LoginXBOX360_OLD(string xBoxId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByXbox360ID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult mLoginResult = this.Login(tUser.username, tUser.password);
+
+                if (mLoginResult.Result == 0)
+                    SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                return mLoginResult;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+        public MLoginResult LoginXBOX360(string xBoxId)
+        {
+            //Library.Business.BLog bLog = new Library.Business.BLog();
+            //bLog.Add("AZURE", "4::LoginXBOX360");
+
+            PTUser pUser = new PTUser(RID);
+
+            //bLog.Add("AZURE", "4::LoginXBOX360 (GetByXbox360ID)");
+            TUser tUser = pUser.GetByXbox360ID(xBoxId);
+
+            if (tUser != null)
+            {
+                //bLog.Add("AZURE", "4::LoginXBOX360 (tUser)");
+                MLoginResult result = new MLoginResult();
+
+                MUsers mUsers;
+
+                //bLog.Add("AZURE", "4::LoginXBOX360 (UpdateLogon)");
+                UpdateLogon(tUser);
+
+                //bLog.Add("AZURE", "4::LoginXBOX360 (FillUser)");
+                mUsers = FillUser(tUser);
+
+                //bLog.Add("AZURE", "4::LoginXBOX360 (SetDataIfEmpty)");
+                SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                //bLog.Add("AZURE", "4::LoginXBOX360 (GetSubscriptionPlan)");
+                BSubscription bSubscription = BSubscription.Instance(RID);
+                mUsers.PlanId = bSubscription.GetSubscriptionPlan(tUser.Id);
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = "";
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                //bLog.Add("AZURE", "4::LoginXBOX360 (tUser - null)");
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+        public MLoginResult LoginXBOXOneLocal(string xBoxId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByXboxOneID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult result = new MLoginResult();
+
+                MUsers mUsers;
+
+                UpdateLogon(tUser);
+
+                mUsers = FillUser(tUser);
+
+                SetDataIfEmpty(tUser.Id, XBOX_ONE_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = "";
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+
+        public MLoginResult LoginXBOXOne(string xBoxId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByXboxOneID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult mLoginResult = this.Login(tUser.username, tUser.password);
+
+                if (mLoginResult.Result == 0)
+                    SetDataIfEmpty(tUser.Id, XBOX_ONE_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                return mLoginResult;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+        //public MLoginResult LoginXBOX(string xBoxId)
+        //{
+        //    PTUser pUser = new PTUser(RID);
+
+        //    TUser tUser = pUser.GetByXboxID(xBoxId);
+
+        //    if (tUser != null)
+        //    {
+        //        MLoginResult mLoginResult = this.Login(tUser.username, tUser.password);
+
+        //        if (mLoginResult.Result == 0)
+        //            SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+        //        return mLoginResult;
+        //    }
+        //    else
+        //    {
+        //        MLoginResult result = new MLoginResult();
+        //        result.SessionID = "";
+        //        result.Result = -1; //usuário ou senha inválido
+        //        result.Message = "";
+        //        return result;
+        //    }
+        //}
+
+
+        public MLoginResult LoginXBOX360Local(string xBoxId)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByXbox360ID(xBoxId);
+
+            if (tUser != null)
+            {
+                MLoginResult result = new MLoginResult();
+
+                MUsers mUsers;
+
+                UpdateLogon(tUser);
+
+                mUsers = FillUser(tUser);
+
+                SetDataIfEmpty(tUser.Id, XBOX_FIRST_LOGIN, DateTime.Now.ToString("yyyyMMddHHmmss"));
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = "";
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                MLoginResult result = new MLoginResult();
+                result.SessionID = "";
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = "";
+                return result;
+            }
+        }
+
+
+
+        public string GetPasswordByEmail(string email)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            TUser tUser = pUser.GetByUserName(email);
+
+
+            if (tUser != null)
+            {
+                return tUser.password;
+            }
+
+            return string.Empty;
+        }
+        public abstract MLoginResult LoginNetClaro(string userId, MOauth mOauth, string urlAuthorization, bool createIfNotExists);
+
+        public abstract MLoginResult LoginWithActivationCode(string code);
+
+
+        public abstract MLoginResult LoginFacebook(string userId, string accessToken, bool createIfNotExists);
+
+        public abstract bool ConnectToFacebook(string facebookId, string accessToken, int userId);
+
+        public string ForgottenMessage(int userId)
+        {
+            //Generate forgottenMessage
+            DateTime? lastLogonDate = BUsers.InstanceByUser(userId).Get(userId).LastLogonDate;
+            //lastLogonDate //kkS2mm2
+
+            string keyTemp = String.Format("kkS2{0}mm2", DateTime.Now.DayOfYear);
+
+            DateTime dateTime = TimeZoneInfo.ConvertTime(DateTime.Now.AddHours(12), TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"));
+
+            string userIdCript = Library.Encryption.Encrypt(keyTemp,
+                userId + "timeOut" + dateTime.ToString() + "typeRenew:SMS");
+            userIdCript = userIdCript.Replace(@"+", "ccc1").Replace(@"/", "ccc2");
+            userIdCript = System.Net.WebUtility.UrlEncode(userIdCript);
+            string message = String.Format(@"https://www.looke.com.br/settings/renewpassword?data={0}", userIdCript);
+
+            return message;
+        }
+
+        public string ForgottenMessageCinemaVirtual(int userId, string baseUrl)
+        {
+            DateTime? lastLogonDate = BUsers.InstanceByUser(userId).Get(userId).LastLogonDate;
+            string keyTemp = String.Format("kkS2{0}mm2", DateTime.Now.DayOfYear);
+            DateTime dateTime = TimeZoneInfo.ConvertTime(DateTime.Now.AddHours(12), TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"));
+
+            string userIdCript = Library.Encryption.Encrypt(keyTemp,
+                userId + "timeOut" + dateTime.ToString() + "typeRenew:SMS");
+            userIdCript = userIdCript.Replace(@"+", "ccc1").Replace(@"/", "ccc2");
+            userIdCript = System.Net.WebUtility.UrlEncode(userIdCript);
+
+            string message = String.Format(@"{1}/account/renewpassword?data={0}", userIdCript, baseUrl);
+            return message;
+        }
+
+        public string ForgottenMessagePlayPlus(int userId)
+        {
+            //Generate forgottenMessage
+            DateTime? lastLogonDate = BUsers.InstanceByUser(userId).Get(userId).LastLogonDate;
+            //lastLogonDate //kkS2mm2
+
+            string keyTemp = String.Format("kkS2{0}mm2", DateTime.Now.DayOfYear);
+
+            DateTime dateTime = TimeZoneInfo.ConvertTime(DateTime.Now.AddHours(12), TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"));
+
+            string userIdCript = Library.Encryption.Encrypt(keyTemp,
+                userId + "timeOut" + dateTime.ToString() + "typeRenew:SMS");
+            userIdCript = userIdCript.Replace(@"+", "ccc1").Replace(@"/", "ccc2");
+            userIdCript = System.Net.WebUtility.UrlEncode(userIdCript);
+
+            string message = String.Format(@"https://www.playplus.com/account/renewpassword?data={0}", userIdCript);
+            return message;
+        }
+
+        public MLoginResult Login(string userName, string password, int? sourceID = null)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            if (RID == RIDS.CINEMA_VIRTUAL)
+            {
+                if (sourceID.HasValue)
+                {
+                    RID = sourceID.Value;
+                    pUser = new PTUser(RID);
+                }
+            }
+
+            string message = "";
+            bool localLogin;
+            string sessionId;
+            NameValueCollection aditionalData;
+
+            MUsers mUsers = OnLogin(
+                userName,
+                password,
+                out localLogin,
+                out message,
+                out sessionId,
+                out aditionalData,
+                sourceID);
+
+            if (mUsers == null && localLogin)
+            {
+                MLoginResult result = new MLoginResult();
+
+                //tento efetuar o login local
+                TUser tUser = pUser.GetByUserName(userName);
+
+                if (tUser != null && tUser.password == password && tUser.isDisabled != 1)
+                {
+                    try
+                    {
+                        UpdateLogon(tUser);
+                    }
+                    catch(DbUpdateException e)
+                    {
+                        
+                    }
+
+                    mUsers = FillUser(tUser);
+
+                    mUsers.UserId = tUser.Id;
+                    result.SessionID = sessionId;
+                    result.Result = 0;
+                    result.User = mUsers;
+
+                    OnSucessfullyLogin(result, aditionalData);
+
+
+
+                    return result;
+                }
+                else if (tUser != null)
+                {
+                    UpdateLogonAttempt(tUser);
+                }
+
+                result.SessionID = sessionId;
+
+
+                int ret = 0;
+                if (aditionalData != null && aditionalData.HasKeys())
+                {
+                    if (aditionalData["returnLogin"] != null)
+                    {
+                        ret = -2;
+                    }
+                    else
+                    {
+                        ret = -1;
+                    }
+                }
+                else
+                {
+                    ret = -1;
+                }
+
+                result.Result = ret; //usuário ou senha inválido
+
+                //result.Result = -1; //usuário ou senha inválido
+                result.Message = "Usuário ou senha inválida.";
+                return result;
+            }
+            else if (mUsers != null)
+            {
+                TUser tUser;
+
+                //se for faco pelo username ao inves do RetailerUserId porque eles trocaram todos os IDs.
+                if (RID == RIDS.GLOBOMARCAS)
+                {
+                    //atualizo o usuário local
+                    tUser = pUser.GetByUserName(mUsers.UserName);
+                }
+                else
+                {
+                    //atualizo o usuário local
+                    tUser = pUser.GetByRetailUserID(mUsers.RetailerUserId);
+
+                    if (tUser.isDisabled == 1)
+                    {
+                        MLoginResult resultDisabled = new MLoginResult();
+                        resultDisabled.SessionID = sessionId;
+                        resultDisabled.Result = -1; //usuário ou senha inválido
+                        resultDisabled.Message = "Usuário ou senha inválida.";
+                        return resultDisabled;
+                    }
+                }
+
+                if (tUser == null && RID == RIDS.SARAIVA)
+                {
+                    MLoginResult resultInvalid = new MLoginResult();
+                    resultInvalid.SessionID = sessionId;
+                    resultInvalid.Result = -1; //usuário ou senha inválido
+                    resultInvalid.Message = "Usuário ou senha inválida.";
+
+                    return resultInvalid;
+
+                }
+                if (tUser == null && RID == RIDS.GLOBOMARCAS)
+                {
+                    tUser = new TUser();
+                    tUser.date = DateTime.Now;
+                }
+
+                FillDataObject(mUsers, tUser);
+
+                pUser.Update(tUser);
+
+                mUsers = this.Get(tUser.Id);
+
+                MLoginResult result = new MLoginResult();
+
+                result.SessionID = sessionId;
+                result.Result = 0;
+                result.User = mUsers;
+                result.Profiles = mUsers.Profiles;
+
+                OnSucessfullyLogin(result, aditionalData);
+                OnAfterSucessfullyLoginUpdate(result, aditionalData);
+
+                return result;
+            }
+            else
+            {
+                TUser tUser = pUser.GetByUserName(userName);
+
+                if (tUser != null)
+                {
+                    UpdateLogonAttempt(tUser);
+                }
+
+                MLoginResult result = new MLoginResult();
+                result.SessionID = sessionId;
+
+                int ret = 0;
+                if (aditionalData != null && aditionalData.HasKeys())
+                {
+                    if (aditionalData["returnLogin"] != null)
+                    {
+                        ret = -2;
+                    }
+                    else
+                    {
+                        ret = -1;
+                    }
+                }
+                else
+                {
+                    ret = -1;
+                }
+
+                result.Result = ret; //usuário ou senha inválido
+
+                result.Message = message;//"Usuário ou senha inválida.";
+
+                return result;
+            }
+        }
+
+        public MLoginResult EssentialsLogin(string userName, string password, int? sourceID = null)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            string message = "";
+            bool localLogin;
+            string sessionId;
+            NameValueCollection aditionalData;
+
+            MUsers mUsers = OnLoginEssentials(
+                   userName,
+                   password,
+                   out localLogin,
+                   out message,
+                   out sessionId,
+                   out aditionalData,
+                   sourceID);
+
+            if (mUsers == null && localLogin)
+            {
+                MLoginResult result = new MLoginResult();
+                TUser tUser = pUser.GetByUserName(userName);
+
+                if (tUser != null && tUser.password == password && tUser.isDisabled != 1)
+                {
+                    try
+                    {
+                        UpdateLogon(tUser);
+                    }
+                    catch (DbUpdateException e)
+                    {
+
+                    }
+
+                    mUsers = FillUsersLight(tUser);
+
+                    mUsers.UserId = tUser.Id;
+                    result.SessionID = sessionId;
+                    result.Result = 0;
+                    result.User = mUsers;
+
+                    OnSucessfullyLogin(result, aditionalData);
+
+                    return result;
+                }
+                else if (tUser != null)
+                {
+                    try
+                    {
+                        UpdateLogonAttempt(tUser);
+                    }
+                    catch (DbUpdateException e)
+                    {
+
+                    }
+                }
+
+                result.SessionID = sessionId;
+
+                int ret = 0;
+
+                if (aditionalData != null && aditionalData.HasKeys())
+                {
+                    if (aditionalData["returnLogin"] != null)
+                        ret = -2;
+                    else
+                        ret = -1;
+                }
+                else
+                {
+                    ret = -1;
+                }
+
+                result.Result = ret; //usuário ou senha inválido
+
+                //result.Result = -1; //usuário ou senha inválido
+                result.Message = "Usuário ou senha inválida.";
+                return result;
+            }
+            else if (mUsers != null)
+            {
+
+                MLoginResult result = new MLoginResult();
+
+                result.SessionID = sessionId;
+                result.Result = 0;
+                result.User = mUsers;
+                result.Profiles = mUsers.Profiles;
+
+                OnSucessfullyLogin(result, aditionalData);
+                OnAfterSucessfullyLoginUpdate(result, aditionalData);
+
+                return result;
+            }
+            else
+            {
+                TUser tUser = pUser.GetByUserName(userName);
+
+                if (tUser != null)
+                {
+                    UpdateLogonAttempt(tUser);
+                }
+
+                MLoginResult result = new MLoginResult();
+                result.SessionID = sessionId;
+
+                int ret = 0;
+                if (aditionalData != null && aditionalData.HasKeys())
+                {
+                    if (aditionalData["returnLogin"] != null)
+                    {
+                        ret = -2;
+                    }
+                    else
+                    {
+                        ret = -1;
+                    }
+                }
+                else
+                {
+                    ret = -1;
+                }
+
+                result.Result = ret; //usuário ou senha inválido
+
+                result.Message = message;//"Usuário ou senha inválida.";
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        ///  Caso não tenha um profile, adiciona; Retorna sempre um array com todos os profiles
+        /// </summary>
+        /// <param name="RID"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public List<MProfile> AddIfNecessaryAndReturnProfiles(MUsers user)
+        {
+            BProfiles bProfiles = new BProfiles(user.RetailerID);
+            List<MProfile> response;
+
+            var profiles = bProfiles.GetProfilesFromUser(user.UserId);
+
+            if (!profiles.Any())
+            {
+                var profileResult = bProfiles.AddOrUpdateProfile(new MProfile()
+                {
+                    IsKids = false,
+                    ProfileImage = string.Empty,
+                    ProfileName = user.FirstName,
+                    Status = 0,
+                    UserId = user.UserId,
+                    CreatedDate = DateTime.Now
+                });
+                var profile = profileResult.Profile;
+                response = new List<MProfile>() { profile };
+            }
+            else
+                response = profiles;
+
+            return response;
+        }
+
+        public NameValueCollection ListAllData(int userId)
+        {
+            PTUserData process = new PTUserData(this.RID);
+
+            List<TUserData> tUserDatas = process.List(userId);
+
+            if (tUserDatas == null || tUserDatas.Count == 0) return new NameValueCollection();
+
+            NameValueCollection nameValue = new NameValueCollection();
+
+            foreach (TUserData tUserData in tUserDatas)
+            {
+                nameValue.Add(tUserData.name.ToLower().Trim(), tUserData.value);
+            }
+
+            return nameValue;
+        }
+
+        public string GetData(int userId, string name)
+        {
+            name = name.ToLower().Trim();
+
+            PTUserData process = new PTUserData(this.RID);
+
+            List<TUserData> tUserDatas = process.List(userId);
+
+            if (tUserDatas == null || tUserDatas.Count == 0) return "";
+
+            TUserData tUserData = tUserDatas.Where(x => string.Compare(x.name.Trim(), name.Trim(), true) == 0).FirstOrDefault();
+
+            if (tUserData == null) return "";
+
+            return tUserData.value;
+        }
+
+        public List<MUsers> ListUserByData(string name)
+        {
+            name = name.ToLower().Trim();
+
+            PTUser ptUser = new PTUser(this.RID);
+
+            List<TUser> tUsers = ptUser.ListByUserData(name);
+
+            List<MUsers> mUsers = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                mUsers.Add(Cast(t));
+            }
+
+            return mUsers;
+        }
+
+        public void SetUserDataEnsuringUniqueness(int userId, string value, string name)
+        {
+            name = name.ToLower().Trim();
+
+            PTUser ptUser = new PTUser(this.RID);
+
+            List<TUser> tUser = ptUser.ListByUserData(value, name);
+
+            PTUserData process = new PTUserData(this.RID);
+
+            foreach (TUser t in tUser)
+            {
+                if (t.Id != userId)
+                    process.DeleteData(t.Id, name, value);
+            }
+
+            SetData(userId, name, value);
+        }
+
+        public MUsers GetUserFromUserData(string value, string name)
+        {
+            name = name.ToLower().Trim();
+
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.GetByUserData(value, name);
+
+            MUsers mUser = null;
+
+            if (tUser != null)
+                mUser = this.Get(tUser.Id);
+
+            return mUser;
+        }
+
+        public void ClearData(int userId, string name)
+        {
+            name = name.ToLower().Trim();
+
+            PTUserData process = new PTUserData(this.RID);
+            List<TUserData> tUserDatas = process.List(userId);
+
+            TUserData tUserData = null;
+
+            if (tUserDatas != null && tUserDatas.Count > 0)
+            {
+                tUserData = tUserDatas.Where(x => string.Compare(x.name.Trim(), name.Trim(), true) == 0).FirstOrDefault();
+            }
+
+            if (tUserData != null)
+            {
+                process.DeleteData(userId, name);
+            }
+        }
+
+        public void SetData(int userId, string name, string value)
+        {
+            name = name.ToLower().Trim();
+            if (value == null) value = "";
+
+            PTUserData process = new PTUserData(this.RID);
+
+            List<TUserData> tUserDatas = process.List(userId);
+
+            TUserData tUserData = null;
+
+            if (tUserDatas != null && tUserDatas.Count > 0)
+            {
+                tUserData = tUserDatas.Where(x => string.Compare(x.name.Trim(), name.Trim(), true) == 0).FirstOrDefault();
+            }
+
+            if (tUserData == null)
+            {
+                tUserData = new TUserData();
+                tUserData.userId = userId;
+                //tUserData.TUserReference = new EntityReference<TUser>();
+                //tUserData.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+
+                tUserData.value = value;
+                tUserData.name = name;
+
+                process.Update(tUserData);
+            }
+            else
+            {
+                var vv = tUserDatas.Where(x => string.Compare(x.name.Trim(), name.Trim(), true) == 0);
+
+                foreach (var v in vv)
+                {
+                    v.value = value;
+                    v.name = name;
+
+                    process.Update(v);
+                }
+            }
+
+        }
+
+        public void SetDataIfEmpty(int userId, string name, string value)
+        {
+            name = name.ToLower().Trim();
+            if (value == null) value = "";
+
+            PTUserData process = new PTUserData(this.RID);
+
+            TUserData tUserData = process.GetData(userId, name);
+
+            if (tUserData == null)
+            {
+                tUserData = new TUserData();
+                tUserData.userId = userId;
+                //tUserData.TUserReference = new EntityReference<TUser>();
+                //tUserData.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+
+                tUserData.value = value;
+                tUserData.name = name;
+
+                process.Update(tUserData);
+            }
+        }
+
+        public TUserData GetUserData(int userId, string name)
+        {
+            PTUserData process = new PTUserData(this.RID);
+
+            TUserData tUserData = process.GetData(userId, name);
+
+            return tUserData;
+        }
+
+        public void UpdateDataItem(int userId, string name, string value)
+        {
+            PTUserData process = new PTUserData(this.RID);
+
+            var tUserData = new TUserData();
+            //tUserData.TUserReference = new EntityReference<TUser>();
+            //tUserData.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", userId);
+
+            tUserData.Id = userId;
+            tUserData.value = value;
+            tUserData.name = name;
+
+            process.UpdateUserData(tUserData);
+
+        }
+
+        public abstract void ResetPassword(MUsers mUsers);
+
+
+        public abstract string ResetPasswordGetToken(MUsers mUsers);
+
+
+        public MLoginResult RecuperaPassword___1(string userName)
+        {
+            PTUser pUser = new PTUser(RID);
+
+            string message = "";
+            string sessionId = "0";
+            MUsers mUsers = new MUsers();
+
+            MLoginResult result = new MLoginResult();
+
+            //tento efetuar o login local
+            TUser tUser = pUser.GetByUserName(userName);
+
+            if (tUser != null)
+            {
+
+                mUsers = FillUser(tUser);
+
+                mUsers.UserId = tUser.Id;
+                result.SessionID = sessionId;
+                result.Result = 0;
+                result.User = mUsers;
+                return result;
+            }
+            else
+            {
+                result.SessionID = sessionId;
+                result.Result = -1; //usuário ou senha inválido
+                result.Message = message;
+                return result;
+            }
+        }
+
+        public bool RecoverLostPassword(string userName)
+        {
+            return this.ResendUserPassword(userName);
+        }
+
+        internal MUsersPhone CastPhoneNumber(TUserPhone tUserPhone, int userId)
+        {
+            MUsersPhone mUserPhone = new MUsersPhone();
+            mUserPhone.Number = tUserPhone.number;
+            mUserPhone.AreaCode = tUserPhone.areaCode;
+            mUserPhone.Branch = tUserPhone.branch;
+            mUserPhone.CountryCode = tUserPhone.countryCode;
+            mUserPhone.PhoneType = tUserPhone.phoneType;
+            mUserPhone.UserId = userId;
+            return mUserPhone;
+        }
+
+        internal MUsers Cast(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+            PTUser pUser = new PTUser(RID);
+
+            mUser.UserId = tUser.Id;
+            mUser.RetailerID = tUser.retailerID;
+            mUser.RetailerUserId = tUser.retailerUserId;
+            mUser.UserName = tUser.username;
+            mUser.Password = tUser.password;
+            mUser.PersonType = tUser.personType;
+            mUser.Email = tUser.email;
+            mUser.FirstName = tUser.firstName;
+            mUser.LastName = tUser.lastName;
+            mUser.HowYouMetUs = tUser.howYouMetUs;
+            mUser.SourceId = tUser.sourceId;
+            mUser.Document = tUser.document;
+            mUser.Birthday = tUser.birthday;
+            mUser.Gender = tUser.gender;
+            mUser.MaritalStatus = tUser.maritalStatus;
+            mUser.Document = tUser.document;
+            mUser.CountryCode = tUser.countryId;
+
+            if (tUser.TUserData != null && tUser.TUserData.Count > 0)
+            {
+                mUser.UserDatas = Cast(tUser.TUserData);
+            }
+            else
+            {
+                mUser.UserDatas = new List<MUserData>();
+            }
+
+            return mUser;
+        }
+
+        private List<MUserData> Cast(ICollection<TUserData> entityCollection)
+        {
+            List<MUserData> mUserDatas = new List<MUserData>();
+
+            if (entityCollection != null && entityCollection.Count > 0)
+            {
+                foreach (TUserData t in entityCollection)
+                {
+                    mUserDatas.Add(Cast(t));
+                }
+            }
+
+            return mUserDatas;
+        }
+
+        private MUserData Cast(TUserData t)
+        {
+            MUserData m = new MUserData();
+            m.Name = t.name;
+            m.Value = t.value;
+
+            return m;
+        }
+
+        internal MUsers FillUserForList(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+            PTUser pUser = new PTUser(RID);
+
+            mUser.UserId = tUser.Id;
+            mUser.RetailerID = tUser.retailerID;
+            mUser.RetailerUserId = tUser.retailerUserId;
+            mUser.UserName = tUser.username;
+            mUser.Password = tUser.password;
+            mUser.PersonType = tUser.personType;
+            mUser.Email = tUser.email;
+            mUser.FirstName = tUser.firstName;
+            mUser.LastName = tUser.lastName;
+            mUser.HowYouMetUs = tUser.howYouMetUs;
+            mUser.SourceId = tUser.sourceId;
+            mUser.Document = tUser.document;
+            mUser.Birthday = tUser.birthday;
+            mUser.Gender = tUser.gender;
+            mUser.MaritalStatus = tUser.maritalStatus;
+            mUser.Document = tUser.document;
+            mUser.CountryCode = tUser.TCountry.countryId;
+
+            if (tUser.broadband == "S")
+                mUser.IsSubscriber = true;
+            else
+                mUser.IsSubscriber = false;
+
+            return mUser;
+        }
+
+        internal MUsers FillUser(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+            PTUser pUser = new PTUser(RID);
+
+            mUser.RetailerID = tUser.retailerID;
+            mUser.RetailerUserId = tUser.retailerUserId;
+            mUser.UserName = tUser.username;
+            mUser.Password = tUser.password;
+            mUser.PersonType = tUser.personType;
+            mUser.Email = tUser.email;
+            mUser.FirstName = tUser.firstName;
+            mUser.LastName = tUser.lastName;
+            mUser.HowYouMetUs = tUser.howYouMetUs;
+            mUser.SourceId = tUser.sourceId;
+            mUser.Document = tUser.document;
+            mUser.Birthday = tUser.birthday;
+            mUser.Gender = tUser.gender;
+            mUser.MaritalStatus = tUser.maritalStatus;
+            mUser.Document = tUser.document;
+            mUser.CountryCode = tUser.TCountry.countryId;
+            mUser.LastLogonDate = tUser.lastLogonDate;
+            mUser.CreatedDate = tUser.date;
+            mUser.Observation = tUser.observation;
+
+            if (tUser.broadband == "S")
+                mUser.IsSubscriber = true;
+            else
+                mUser.IsSubscriber = false;
+
+            PTUserData ptUserData = new PTUserData(RID);
+
+            List<TUserData> tUserDatas = ptUserData.List(tUser.Id);
+
+            mUser.UserData = "";
+            if (tUserDatas != null)
+            {
+                foreach (TUserData tUserData in tUserDatas)
+                {
+                    mUser.UserData += tUserData.name + "=" + tUserData.value + "&";
+                }
+            }
+
+            List<TUserAddress> tListUserAddress = pUser.ListUserAddress(tUser.Id);
+            List<TUserPhone> tListUserPhone = pUser.ListUserPhone(tUser.Id);
+            FillAdresses(ref mUser, tListUserAddress);
+            FillPhones(ref mUser, tListUserPhone);
+
+            return mUser;
+        }
+
+        internal MUsers FillUsersLight(TUser tUser)
+        {
+            MUsers mUser = new MUsers();
+            PTUser pUser = new PTUser(RID);
+
+            mUser.UserName = tUser.username;
+            mUser.Password = tUser.password;
+            mUser.Email = tUser.email;
+            mUser.FirstName = tUser.firstName;
+            mUser.LastName = tUser.lastName;
+            mUser.SourceId = tUser.sourceId;
+            mUser.Birthday = tUser.birthday;
+            mUser.LastLogonDate = tUser.lastLogonDate;
+            mUser.CreatedDate = tUser.date;
+            mUser.PersonType = tUser.personType;
+
+            if (tUser.broadband == "S")
+                mUser.IsSubscriber = true;
+            else
+                mUser.IsSubscriber = false;
+
+            return mUser;
+        }
+
+        internal MUserResetPassword FillUserResetPassword(TUserResetPassword tUserResetPassword)
+        {
+            MUserResetPassword mUserResetPassword = new MUserResetPassword();
+            PTUserResetPassword pUserResetPassword = new PTUserResetPassword(RID);
+
+            mUserResetPassword.username = tUserResetPassword.username;
+            mUserResetPassword.cpf = tUserResetPassword.cpf;
+            mUserResetPassword.securityKey = tUserResetPassword.securityKey;
+            mUserResetPassword.dueDate = tUserResetPassword.dueDate;
+
+            return mUserResetPassword;
+        }
+
+        private void FillAdresses(ref MUsers mUser, List<TUserAddress> tUserAdress)
+        {
+            mUser.Address = null;
+            mUser.Address = new List<MUsersAddress>();
+
+            foreach (TUserAddress tAddress in tUserAdress)
+            {
+                MUsersAddress mUserAddress = new MUsersAddress();
+                mUserAddress.AdressType = tAddress.addressType;
+                mUserAddress.City = tAddress.city;
+                mUserAddress.Country = tAddress.TCountry.countryId;
+                mUserAddress.State = tAddress.state;
+                mUserAddress.Street = tAddress.street;
+                mUserAddress.Street2 = tAddress.street2;
+                mUserAddress.Street3 = tAddress.street3;
+                mUserAddress.Street4 = tAddress.street4;
+                mUserAddress.StreetType = tAddress.streetType;
+                mUserAddress.UserId = mUser.UserId;
+                mUserAddress.Zip = tAddress.zip;
+                mUser.Address.Add(mUserAddress);
+            }
+        }
+        private void FillPhones(ref MUsers mUser, List<TUserPhone> tListPhones)
+        {
+            mUser.Phones = null;
+            mUser.Phones = new List<MUsersPhone>();
+            foreach (TUserPhone ph in tListPhones)
+            {
+                MUsersPhone mPh = new MUsersPhone();
+                mPh.AreaCode = ph.areaCode;
+                mPh.Branch = ph.branch;
+                mPh.CountryCode = ph.countryCode;
+                mPh.Number = ph.number;
+                mPh.PhoneType = ph.phoneType;
+                mPh.UserId = mUser.UserId;
+                mUser.Phones.Add(mPh);
+            }
+        }
+
+
+
+        internal void UpdateLogon(TUser tUser)
+        {
+            PTUser pUser = new PTUser(RID);
+            tUser.lastLogonDate = DateTime.Now;
+            tUser.lastAttemptDate = tUser.lastLogonDate;
+            pUser.Update(tUser);
+        }
+
+        internal void UpdateLogonAttempt(TUser tUser)
+        {
+            PTUser pUser = new PTUser(RID);
+            tUser.lastAttemptDate = DateTime.Now;
+            pUser.Update(tUser);
+        }
+
+
+        public int GetUserIdByRetailerUserId(string retailerUserId)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.GetByRetailUserID(retailerUserId);
+
+            if (tUser == null)
+                return 0;
+            else
+                return tUser.Id;
+        }
+
+
+        public static bool isValidEmail(string inputEmail)
+        {
+            string strRegex = @"^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}" +
+                  @"\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\" +
+                  @".)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$";
+
+            Regex re = new Regex(strRegex);
+
+            if (re.IsMatch(inputEmail))
+                return (true);
+            else
+                return (false);
+        }
+
+        #endregion
+
+        private void FillDataObject(MUsers mUsers, TUser tUser)
+        {
+            //@@@atualizar outros dados - endereco, telefone e outras informacoes 
+            //@@@ filhos, ocupação, endereco principal, telefone principal
+            tUser.lastLogonDate = DateTime.Now;
+            tUser.lastAttemptDate = tUser.lastLogonDate;
+            tUser.retailerID = RID;
+            tUser.retailerUserId = mUsers.RetailerUserId;
+            tUser.username = mUsers.UserName;
+            tUser.password = mUsers.Password;
+            tUser.personType = mUsers.PersonType;
+            tUser.email = mUsers.Email;
+            tUser.firstName = mUsers.FirstName;
+            tUser.lastName = mUsers.LastName;
+            tUser.howYouMetUs = mUsers.HowYouMetUs;
+            tUser.sourceId = mUsers.SourceId;
+            tUser.document = mUsers.Document;
+            tUser.birthday = mUsers.Birthday;
+            tUser.gender = mUsers.Gender;
+            tUser.maritalStatus = mUsers.MaritalStatus;
+            tUser.document = mUsers.Document;
+
+            if (RID != RIDS.SKY)
+            {
+                if (mUsers.BroadBand == "S")
+                    tUser.broadband = "S";
+
+                else
+                    tUser.broadband = "N";
+            }
+            else
+            {
+                if (mUsers.IsSubscriber)
+                    tUser.broadband = "S";
+                else
+                    tUser.broadband = "N";
+            }
+
+            tUser.countryId = mUsers.CountryCode;
+            //if (tUser.TCountryReference == null)
+            //{
+            //    tUser.TCountryReference = new EntityReference<TCountry>();
+            //    tUser.TCountryReference.EntityKey = new EntityKey("DB.TCountry", "countryId", mUsers.CountryCode);
+            //}
+            //else
+            //{
+            //    tUser.TCountryReference.EntityKey = new EntityKey("DB.TCountry", "countryId", mUsers.CountryCode);
+            //}
+
+        }
+
+        private void FillDataObjectAdress(MUsers mUsers, List<TUserAddress> ltUsersAdress)
+        {
+            PTUser p = new PTUser(RID);
+
+            if (mUsers.Address != null)
+            {
+                foreach (MUsersAddress mAdr in mUsers.Address)
+                {
+                    TUserAddress tUserAddress = new TUserAddress();
+
+                    TUserAddress tCurrentAddress = p.GetAddress(mUsers.UserId, mAdr.AdressType);
+
+                    var ptPais = new PTCountry();
+
+                    if (tCurrentAddress != null)
+                        tUserAddress.Id = tCurrentAddress.Id;
+                    else
+                        tUserAddress.Id = 0;
+
+                    tUserAddress.userId = mUsers.UserId;
+                    //tUserAddress.TUserReference = new EntityReference<TUser>();
+                    //tUserAddress.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", mUsers.UserId);
+                    tUserAddress.countryId = mAdr.Country;
+                    //tUserAddress.TCountryReference = new EntityReference<TCountry>();
+                    //tUserAddress.TCountryReference.EntityKey = new EntityKey("DB.TCountry", "countryId", mAdr.Country);
+
+                    tUserAddress.addressType = mAdr.AdressType;
+                    tUserAddress.city = mAdr.City;
+                    tUserAddress.state = mAdr.State;
+                    tUserAddress.street = mAdr.Street;
+                    tUserAddress.street2 = mAdr.Street2;
+                    tUserAddress.street3 = mAdr.Street3;
+                    tUserAddress.street4 = mAdr.Street4;
+                    tUserAddress.streetType = mAdr.StreetType;
+                    tUserAddress.zip = mAdr.Zip;
+                    ltUsersAdress.Add(tUserAddress);
+                }
+            }
+        }
+
+        private void FillDataObjectPhone(MUsers mUsers, List<TUserPhone> ltUsersPhone)
+        {
+            PTUser p = new PTUser(RID);
+
+            foreach (MUsersPhone mPho in mUsers.Phones)
+            {
+                TUserPhone tPho = new TUserPhone();
+
+                TUserPhone tCurrentPhone = p.GetPhone(mUsers.UserId, mPho.PhoneType);
+
+                var ptPais = new PTCountry();
+
+                if (tCurrentPhone != null)
+                    tPho.Id = tCurrentPhone.Id;
+                else
+                    tPho.Id = 0;
+
+                tPho.userId = mUsers.UserId;
+                //tPho.TUserReference = new EntityReference<TUser>();
+                //tPho.TUserReference.EntityKey = new EntityKey("DB.TUser", "Id", mUsers.UserId);
+                tPho.areaCode = mPho.AreaCode;
+                tPho.branch = mPho.Branch;
+                tPho.countryCode = mPho.CountryCode;
+                tPho.number = mPho.Number;
+                tPho.phoneType = mPho.PhoneType;
+                ltUsersPhone.Add(tPho);
+            }
+        }
+        public static bool CheckCPF(string cpf)
+        {
+            int[] multiplicador1 = new int[9] { 10, 9, 8, 7, 6, 5, 4, 3, 2 };
+            int[] multiplicador2 = new int[10] { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2 };
+            string tempCpf;
+            string digito;
+            int soma;
+            int resto;
+
+            if (cpf == null) cpf = "";
+            cpf = cpf.Trim();
+            cpf = cpf.Replace(".", "").Replace("-", "");
+
+            if (cpf == "00000000000")
+                return false;
+            if (cpf == "11111111111")
+                return false;
+            if (cpf == "22222222222")
+                return false;
+            if (cpf == "33333333333")
+                return false;
+            if (cpf == "44444444444")
+                return false;
+            if (cpf == "55555555555")
+                return false;
+            if (cpf == "66666666666")
+                return false;
+            if (cpf == "77777777777")
+                return false;
+            if (cpf == "88888888888")
+                return false;
+            if (cpf == "99999999999")
+                return false;
+
+            if (cpf.Length != 11)
+                return false;
+
+            double num;
+            bool isNum = double.TryParse(cpf, out num);
+
+            if (isNum == false)
+                return false;
+
+            tempCpf = cpf.Substring(0, 9);
+            soma = 0;
+            for (int i = 0; i < 9; i++)
+                soma += int.Parse(tempCpf[i].ToString()) * multiplicador1[i];
+
+            resto = soma % 11;
+            if (resto < 2)
+                resto = 0;
+            else
+                resto = 11 - resto;
+
+            digito = resto.ToString();
+
+            tempCpf = tempCpf + digito;
+
+            soma = 0;
+            for (int i = 0; i < 10; i++)
+                soma += int.Parse(tempCpf[i].ToString()) * multiplicador2[i];
+
+            resto = soma % 11;
+            if (resto < 2)
+                resto = 0;
+            else
+                resto = 11 - resto;
+
+            digito = digito + resto.ToString();
+
+            return cpf.EndsWith(digito);
+        }
+
+        public bool EnsureSize(string value, int size)
+        {
+            return value.Length > size;
+
+        }
+
+        public bool EnsureExactSize(string value, int size)
+        {
+            return value.Length != size;
+        }
+
+        public bool EnsureMinSize(string value, int size)
+        {
+            return value.Length < size;
+        }
+
+        public bool EnsureMandatorySize(string value, int size)
+        {
+            return value.Length < 1 || value.Length > size;
+        }
+
+        public int GetByTransactionID(int transactionId)
+        {
+            PTOrderItem ptOrderItem = new PTOrderItem(0);
+
+            TUser tUser = ptOrderItem.GetUserByOrderItemId(transactionId);
+
+            return tUser.Id;
+        }
+
+
+        public int GetPlanID(int userId)
+        {
+            BSubscription bSubscription = BSubscription.Instance(RID);
+
+
+            return bSubscription.GetSubscriptionPlan(userId);
+
+        }
+        public int GetPlanBitwiseID(int userId)
+        {
+            BSubscription bSubscription = BSubscription.Instance(RID);
+
+
+            return bSubscription.GetSubscriptionsBitwise(userId);
+
+        }
+        public int GetPlanID(int userId, int planId)
+        {
+            BSubscription bSubscription = BSubscription.Instance(RID);
+
+            MSubscriptionInfo s = bSubscription.GetByUserIdAndPlan(userId, planId);
+
+            if (s?.Status == SubscriptionStatus.Active)
+                return s.Id;
+            else
+                return 0;
+        }
+
+        public int GetSubPlanID(int userId)
+        {
+            BSubscription bSubscription = BSubscription.Instance(RID);
+
+
+            return bSubscription.GetSubscriptionSubPlan(userId);
+
+        }
+
+        public MUsers GetUserByDocument(string document)
+        {
+            if (String.IsNullOrEmpty(document)) return null;
+
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByDocument(document);
+
+            TUser tUser = tUsers.FirstOrDefault();
+
+            if (tUser != null)
+                return this.Get(tUser.Id);
+
+            return null;
+        }
+
+        public List<MUsers> ListUserByDocument(string document)
+        {
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByDocument(document);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                result.Add(Cast(t));
+            }
+
+            return result;
+        }
+
+        public List<MUsers> ListByLikeUsername(string name)
+        {
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByLikeUsername(name);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                result.Add(Cast(t));
+            }
+
+            return result;
+        }
+
+        public List<MUsers> ListByName(string name)
+        {
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByName(name);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                result.Add(Cast(t));
+            }
+
+            return result;
+        }
+
+
+        public List<MUsers> ListByUsersIds(List<int> usersIds)
+        {
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByUsersIds(usersIds);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                result.Add(Cast(t));
+            }
+
+            return result;
+        }
+
+        public List<MUsers> ListStartsWith(string email)
+        {
+            PTUser ptUsers = new PTUser(RID);
+
+            List<TUser> tUsers = ptUsers.ListByEmail(email);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (TUser t in tUsers)
+            {
+                result.Add(Cast(t));
+            }
+
+            return result;
+        }
+
+        public MUsers GetByEmail(string email)
+        {
+            PTUser pUser = new PTUser(RID);
+            TUser tUser = pUser.GetByEmail(email);
+
+            if (tUser == null)
+            {
+                return null;
+            }
+            else
+            {
+                return this.Get(tUser.Id);
+            }
+        }
+
+        public MUsers GetByPhoneType(string phoneType, int countryCode, int areaCode, string number)
+        {
+            PTUser pUser = new PTUser(RID);
+            TUser tUser = pUser.GetByPhoneType(countryCode, areaCode, number, phoneType);
+
+            if (tUser == null)
+            {
+                return null;
+            }
+            else
+            {
+                return this.Get(tUser.Id);
+            }
+        }
+
+        public List<MUsers> GetByPhoneNumber(int areaCode, string number, int? countryCode = null)
+        {
+            List<MUsers> result = new List<MUsers>();
+            PTUser pt = new PTUser(RID);
+
+            var x = pt.GetByPhoneNumber(areaCode, number, countryCode);
+            foreach (var item in x)
+            {
+                result.Add(Cast(item));
+            }
+
+            return result;
+        }
+
+        public List<MUsersPhone> GetPhoneNumbers(int userId)
+        {
+            List<MUsersPhone> result = new List<MUsersPhone>();
+            PTUser pt = new PTUser(RID);
+
+            var x = pt.GetPhoneNumbers(userId);
+            foreach (var item in x)
+            {
+                result.Add(CastPhoneNumber(item, userId));
+            }
+
+            return result;
+        }
+
+        public List<MUsers> GetUserFriends(int userId)
+        {
+            PTUser pt = new PTUser(RID);
+            var x = pt.GetFriendsByUserId(userId);
+
+            List<MUsers> result = new List<MUsers>();
+            foreach (var item in x)
+            {
+                result.Add(Cast(item));
+            }
+
+            return result;
+        }
+
+        public List<MUserData> ListUserData(int userId)
+        {
+            PTUserData process = new PTUserData(RID);
+            List<TUserData> listTData = process.List(userId);
+
+            if (listTData != null)
+            {
+                List<MUserData> listMData = new List<MUserData>();
+
+                foreach (TUserData tUserData in listTData)
+                {
+                    listMData.Add(Cast(tUserData));
+                }
+
+                return listMData;
+            }
+
+            return null;
+        }
+
+        public List<MUsers> GetFriendAutoComplete(int userId, string user)
+        {
+            PTUser pt = new PTUser(RID);
+            var x = pt.GetFriendAutoComplete(userId, user);
+
+            List<MUsers> result = new List<MUsers>();
+
+            foreach (var item in x)
+            {
+                result.Add(Cast(item));
+            }
+
+            return result;
+        }
+
+        public List<MUsers> ListFollowersByUser(int userId)
+        {
+            var pt = new PTUser(RID);
+            var l = pt.ListFollowers(userId);
+            return ConvertTUserToMUser(l);
+        }
+
+        public List<MUsers> ListWhoTheUserIsFollowing(int userId)
+        {
+            var pt = new PTUser(RID);
+            return ConvertTUserToMUser(pt.ListFollowing(userId));
+        }
+
+        public void FollowUser(int idUser, int idUserTarget)
+        {
+            var pt = new PTUserFollows();
+            pt.Add(idUser, idUserTarget);
+        }
+
+        public void UnfollowUser(int idUser, int idUserTarget)
+        {
+            var pt = new PTUserFollows();
+            pt.Delete(idUser, idUserTarget);
+        }
+
+        public bool IsFollower(int idUser, int idUserTarget)
+        {
+            var pt = new PTUserFollows();
+            return pt.IsFollower(idUser, idUserTarget);
+        }
+
+        private List<MUsers> ConvertTUserToMUser(IEnumerable<TUser> users)
+        {
+            List<MUsers> r = new List<MUsers>();
+
+            foreach (var item in users)
+            {
+                r.Add(Cast(item));
+            }
+            return r;
+        }
+
+        public void ChangeUserDocument(int userID, string newDocument)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.Get(userID);
+
+            tUser.document = newDocument;
+
+            ptUser.Update(tUser);
+        }
+
+        public void ChangeUserNameAndEmail(int userID, string newUserName, string newEmail)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.Get(userID);
+
+            tUser.username = newUserName;
+            tUser.email = newEmail;
+
+            ptUser.Update(tUser);
+        }
+
+        public void ChangePassword(int userID, string newPassword)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.Get(userID);
+
+            tUser.password = newPassword;
+
+            ptUser.Update(tUser);
+
+            if (RID == RIDS.UNIVER)
+            {
+                BEmailContact bEmailContact = BEmailContact.Instance(RIDS.UNIVER);
+                bEmailContact.PasswordLinkConfirm(new Truetech.Library.Business.Email.BEmailContact.EmailPasswordInfo() { UserId = tUser.Id });
+            }
+        }
+
+        public bool CheckEmailAlreadyExists(string email)
+        {
+            bool exists = false;
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                PTUser ptUser = new PTUser(RID);
+                var user = ptUser.GetByEmail(email);
+                if (user != null)
+                {
+                    exists = true;
+                }
+            }
+
+            return exists;
+        }
+
+        public bool CheckCPFAlreadyExists(string cpf)
+        {
+            bool exists = false;
+            if (!string.IsNullOrWhiteSpace(cpf))
+            {
+                string unmaskedCpf = cpf.Replace(".", "").Replace("-", "").Replace("/", "");
+
+                if (unmaskedCpf.Length == 11)
+                {
+                    string maskedCpf = string.Empty;
+                    for (int i = 0; i < unmaskedCpf.Length; i++)
+                    {
+                        if (i == 3 || i == 6)
+                            maskedCpf += "." + unmaskedCpf[i];
+                        else if (i == 9)
+                            maskedCpf += "-" + unmaskedCpf[i];
+                        else
+                            maskedCpf += unmaskedCpf[i];
+                    }
+
+                    string[] arrCpf = { unmaskedCpf, maskedCpf };
+
+                    PTUser ptUser = new PTUser(RID);
+
+                    foreach (string newcpf in arrCpf)
+                    {
+                        var user = ptUser.GetByCPF(newcpf);
+                        if (user != null)
+                        {
+                            exists = true;
+                            break;
+                        }
+
+                    }
+                }
+
+            }
+            return exists;
+        }
+
+        public void ChangeUserNameAndEmailAndPassword(int userID, string newUserName, string newEmail, string newPassword)
+        {
+            PTUser ptUser = new PTUser(this.RID);
+
+            TUser tUser = ptUser.Get(userID);
+
+            tUser.username = newUserName;
+            tUser.email = newEmail;
+            tUser.password = newPassword;
+
+            ptUser.Update(tUser);
+        }
+
+        public TransactionSource GetTransactionSource(int userId)
+        {
+            try
+            {
+                // usar o NONE como default.
+                TransactionSource result = TransactionSource.NONE;
+                var user = this.Get(userId);
+                if (user != null)
+                {
+                    if (user.SourceId != null)
+                        result = (TransactionSource)Enum.ToObject(typeof(TransactionSource), user.SourceId);
+                }
+
+                return result;
+            }
+            catch (Exception)
+            {
+                return TransactionSource.NONE;
+            }
+        }
+
+        public MAddUsersResult ChangePasswordAndActivationCode(MUsers mUser, string newPassword, BUserActivationCode.activatedFrom from)
+        {
+            MAddUsersResult mResult = new MAddUsersResult();
+
+            //Atualizo a senha do usuário
+            //MUsers mUser = this.Get(userID);
+            mUser.Password = newPassword;
+            mResult = this.UpdateUser(mUser);
+
+            //Caso a atualização ocorra com sucesso, inicio o processo de geração do activationCode
+            if (mResult.Result == 0)
+            {
+                BUserActivationCode bActivationCode = new BUserActivationCode(Instance(RID));
+
+                //Verifico se há um activationcode gerado para esse usuário antes de gerar um novo, caso não exista não é preciso gerá-lo,
+                var activationCode = bActivationCode.GetLastActivationCode(mUser.UserId);
+                if (activationCode != null)
+                {
+                    activationCode = null;
+
+                    activationCode = bActivationCode.GenerateCode(mUser.UserId, from);
+                    if (activationCode == null)
+                    {
+                        mResult.Result = -1;
+                        mResult.UserCheckFailure = UserCheckFailure.Error;
+                        mResult.Message = "Não foi possível gerar um novo ActivationCode";
+                    }
+                }
+            }
+
+            return mResult;
+        }
+
+        public List<TUserAddress> GetUserAddress(int userId)
+        {
+            var pUser = new PTUser(RID);
+            var tListUserAddress = pUser.ListUserAddress(userId);
+
+            return tListUserAddress == null ? new List<TUserAddress>() : tListUserAddress;
+        }
+
+        public void InsertUpdateUserAddress(List<TUserAddress> addressList)
+        {
+            var pUser = new PTUser(RID);
+
+            pUser.UpdateAddress(addressList);
+        }
+    }
+}
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web.Script.Serialization;
+using Truetech.Library.Message;
+using Truetech.Library.Message.Services;
+
+namespace Truetech.Library.Business.Services
+{
+    class BGetHistoryService
+    {
+        public static JsonGetHistoryResponse Post(string serviceUrl, JsonGetHistoryRequest requestData)
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | (SecurityProtocolType)3072 | SecurityProtocolType.Tls;
+
+            JsonGetHistoryResponse response = null;
+
+            string servicesEndpoint = new Config().Get("SERVICES_ENDPOINT");
+
+            if (!string.IsNullOrEmpty(servicesEndpoint))
+            {
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                var data = serializer.Serialize(requestData);
+
+                byte[] byteArray = Encoding.UTF8.GetBytes(data);
+
+                WebRequest request = HttpWebRequest.Create(string.Format("{0}/{1}/GetHistory", servicesEndpoint, serviceUrl));
+                request.Method = "POST";
+                request.ContentLength = byteArray.Length;
+                request.ContentType = "application/json";
+
+                using (Stream requestStream = request.GetRequestStream())
+                {
+                    requestStream.Write(byteArray, 0, byteArray.Length);
+                    requestStream.Flush();
+                }
+
+                using (WebResponse webResponse = request.GetResponse())
+                {
+                    using (Stream responseStream = webResponse.GetResponseStream())
+                    {
+                        using (StreamReader reader = new StreamReader(responseStream))
+                        {
+                            string responseFromServer = reader.ReadToEnd();
+
+                            if (!string.IsNullOrEmpty(responseFromServer))
+                            {
+                                //Removendo objeto ({"GetHistoryResult": ... }) que está encapsulando o response para realizar o Deserialize
+                                responseFromServer = responseFromServer.Remove(responseFromServer.Length - 1, 1).Replace("{\"GetHistoryResult\":", "");
+
+                                response = new JsonGetHistoryResponse();
+                                response = serializer.Deserialize<JsonGetHistoryResponse>(responseFromServer);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return response;
+        }
+        using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Truetech.Library.Message
+{
+    public class MLiveEvent
+    {
+        public int Id { get; set; }
+        public int liveDateTimeId { get; set; }
+        public string title { get; set; }
+        public string description { get; set; }
+        public string publishPointDescription { get; set; }
+        public string urlWeb { get; set; }
+        public string urlDash { get; set; }
+        public string urlSmooth { get; set; }
+        public string urlHLS { get; set; }
+        public string urlDashBackup { get; set; }
+        public string urlSmoothBackup { get; set; }
+        public string urlHLSBackup { get; set; }
+        public DateTime dateInit { get; set; }
+        public DateTime dateEnd { get; set; }
+        public string dateInitString { get; set; }
+        public string dateEndString { get; set; }
+        public DateTime dateInitFeatured { get; set; }
+        public DateTime dateEndFeatured { get; set; }
+        public string dateInitFeaturedString { get; set; }
+        public string dateEndFeaturedString { get; set; }
+        public string thumbPortrait { get; set; }
+        public string thumbLandscape { get; set; }
+        public string banner { get; set; }
+        public string bannerLive { get; set; }
+        public int statusBannerLive { get; set; }
+        public string background { get; set; }
+        public DateTime dateUnlockSign { get; set; }
+        public string dateUnlockSignString { get; set; }
+        public string language { get; set; }
+        public string languageDetails { get; set; }
+        public string urlCountryImage { get; set; }
+        public int countryId { get; set; }
+        public int minimumInstances { get; set; }
+        public int Price { get; set; }
+        public bool isLiveNow { get; set; }
+
+}
+    public class MLiveGrid
+    {
+        public int Id { get; set; }
+        public int liveEventId { get; set; }
+        public int liveDateTimeId { get; set; }
+        public int liveGridProgramId { get; set; }
+        public DateTime date { get; set; }
+        public TimeSpan hourInit { get; set; }
+        public TimeSpan duration { get; set; }
+        public string name { get; set; }
+        public string description { get; set; }
+        public string imageThumbURL { get; set; }
+        public string imageBannerURL { get; set; }
+        public DateTime CurrentDate { get; set; }
+        public string CurrentDateString { get; set; }
+
+    }
+    public class MTLiveEvent
+    {
+        public int Id { get; set; }
+        public string title { get; set; }
+        public string description { get; set; }
+        public int livePublishPointId { get; set; }
+        public string thumbLandscape { get; set; }
+        public string thumPortrait { get; set; }
+        public string banner { get; set; }
+        public string bannerLive { get; set; }
+        public string background { get; set; }
+        public int status { get; set; }
+        public int statusBannerLive { get; set; }
+        public string language { get; set; }
+        public int countryId { get; set; }
+        public string state { get; set; }
+    }
+
+    public class MLiveEventConcurrent
+    {
+        public int Id { get; set; }
+        public string title { get; set; }
+        public string description { get; set; }
+        public string language { get; set; }
+        public int? countryId { get; set; }
+    }
+
+    public class MHourEvent
+    {
+        public int Id { get; set; }
+        public DateTime dateInit { get; set; }
+        public DateTime dateEnd { get; set; }
+        public TimeSpan dayHourInit { get; set; }
+        public TimeSpan dayHourEnd { get; set; }
+        public int minutesBeforeStart { get; set; }
+        public int minutesBeforeEnd { get; set; }
+        public int minutesLiveSign { get; set; }
+        public string weekdays { get; set; }
+        public int liveEventId { get; set; }
+        public int minimumInsatances { get; set; }
+    }
+    public enum MLiveDayOfWeek
+    {
+        Sunday = 0,
+        Monday = 1,
+        Tuesday = 2,
+        Wednesday = 3,
+        Thursday = 4,
+        Friday = 5,
+        Saturday = 6
+    }
+}
+    }
+}
+
+
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            CreateHostBuilder(args).Build().Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+    }
+}/middlewares
+/routes
+/services
+/models
+/repositories
+/providers
+/utils
+server.ts/modules
+  /users
+      /application
+        * controllers e coisas de o user entra
+      /domain
+        /interfaces
+          /services
+          /repositories
+          /provider
+            IHashProvider
+        /services
+          CreateUserRequest / Command (nome, sobrenome, senha, role)
+          CreateUserService(CreateUserRequest)
+            - execute / Handler
+          *
+        * entidades
+        * models (enums)
+        * interface repositorios
+      /infra
+        /data
+          * implementação dos repos
+        /providers
+          HashProvider
+    /appintments
+      *** 
+/shared
+	/crosscuttong
+		/providers
+			- CloudStorage
+			- Hash
+
+      name: Publishing ACR.
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  build:
+    name: Building the bin code
+    runs-on: ubuntu-latest
+    
+    env:
+      DIRETORIO_WEBAPP: "./SiteContagem"
+  
+    steps:
+    - name: getting the code
+      uses: actions/checkout@v2
+
+    - name: Just a log
+      run: echo Lets go!
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.301
+
+    - name: Build com o utilitario dotnet
+      run: dotnet build ${{ env.DIRETORIO_WEBAPP }} --configuration Release
+
+    - name: Publish com o utilitario dotnet
+      run: dotnet publish ${{ env.DIRETORIO_WEBAPP }} -c Release -o app
+
+    - name: Azure Login - Conectando com Credenciais no Azure
+      uses: Azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Docker Login - Azure Container Registry
+      uses: Azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.DOCKER_SERVER }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build e Push no Azure ACR
+      run: |
+        docker build . --file ${{ env.DIRETORIO_WEBAPP }}/DockerfileProd --tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.NOME_IMAGEM }}:$GITHUB_RUN_NUMBER
+        docker tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.NOME_IMAGEM }}:$GITHUB_RUN_NUMBER ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.NOME_IMAGEM }}:latest
+        docker push ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.NOME_IMAGEM }}
+    - name: Deployment - Azure WebApp Container
+      env:
+        WEB_APP: ${{ secrets.WEB_APP }} 
+        IMAGEM_DEPLOYMENT: ${{ secrets.NOME_IMAGEM }}:latest
+      uses: Azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.WEB_APP }}
+        images: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.NOME_IMAGEM }}
